@@ -1,0 +1,21 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+cd WORKING_*
+
+echo
+echo "复制所需要的 Apps2SD 文件到 /data 和 /system 文件夹 ..."
+echo
+
+cp -rf ../tools/apps2sd_files/data .
+cp -rf ../tools/apps2sd_files/system .
+
+cd ..

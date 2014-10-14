@@ -1,0 +1,149 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+clear
+
+while :
+do
+
+  clear
+
+  echo
+  echo "Boot image 工具"
+  echo "----------------"
+  echo
+  echo "输入选项:"
+  echo
+
+  if [ -d WORKING_* ]
+  then
+
+    if [ -d BOOT-EXTRACTED ]
+    then
+      extracted=true
+    else
+      extracted=false
+    fi
+
+    cd WORKING_*
+    if [ -e boot.img ]
+    then
+      boot_img=true
+    else
+      boot_img=false
+    fi
+
+    if [ -d boot ]
+    then
+      boot_folder=true
+    else
+      boot_folder=false
+    fi
+
+    cd ..
+
+
+    if [ "$boot_img" == "true" ]
+    then
+      echo "  s = 显示 boot.img 信息"
+    fi
+
+    if [ "$extracted" == "true" ]
+    then
+      echo "  b = 从 BOOT-EXTRACTED 文件夹生成 boot.img (用于工作文件夹)"
+      echo "  n = 从 BOOT-EXTRACTED 文件夹生成 NAND boot文件夹 (用于工作文件夹)"
+      echo "  r = 删除 BOOT-EXTRACTED 文件夹 (不生成任何文件)"
+    else
+
+      if [ "$boot_img" == "true" ]
+      then
+        echo "  w = 从 boot.img 提取 kernel+ramdisk"
+        echo "  c = 转换 boot.img 为 NAND boot 文件夹"
+        echo "  p = 更改在 boot.img 中的命令行参数"
+
+      elif [ "$boot_folder" == "true" ]
+      then
+        echo "  y = 转换 NAND boot 文件夹为 boot.img"
+        echo "  z = 从 NAND boot 文件夹中提取 kernel+ramdisk"
+      fi
+    fi
+  fi
+
+  echo "  a = 从任意文件夹中的 boot.img 或 recovery.img 提取 kernel+ramdisk"
+  echo "  x = 退出"
+  echo
+  echo "  提示：其他选项可能不会显示在此菜单中，直到上面的某个命令"
+  echo "  被执行或创建一个指定的工作文件夹。"
+  echo "  （工作文件夹的创建请使用厨房主菜单中的第1项！）"
+  echo
+  echo "  例如 除非你先解压boot.img文件，否则你看不到重新包装boot.img的选项"
+  echo "  重新打包boot.img时需要一个工作文件夹和原始的boot.img文件，使厨房"
+  echo "  可以使用它的头信息来创建新的boot.img文件。"
+  echo
+  echo -n "? "
+
+  read enterLetter
+
+  if [ "$enterLetter" == "s" ]
+  then
+    scripts/show_boot_img_info
+
+  elif [ "$enterLetter" == "w" ]
+  then
+    scripts/ensure_boot_extracted
+
+  elif [ "$enterLetter" == "r" ]
+  then
+    rm -rf BOOT-EXTRACTED; echo; echo "删除"
+
+  elif [ "$enterLetter" == "b" ]
+  then
+    scripts/prompt_build_boot
+    scripts/build_boot_img
+
+  elif [ "$enterLetter" == "a" ]
+  then
+    scripts/extract_boot_img
+
+  elif [ "$enterLetter" == "n" ]
+  then
+    scripts/prompt_build_boot
+    scripts/build_nand_boot
+
+  elif [ "$enterLetter" == "c" ]
+  then
+    scripts/ensure_boot_extracted
+    scripts/build_nand_boot
+
+  elif [ "$enterLetter" == "p" ]
+  then
+    scripts/change_cmdline
+
+  elif [ "$enterLetter" == "y" ]
+  then
+    scripts/ensure_nand_extracted
+    scripts/build_boot_img
+
+  elif [ "$enterLetter" == "z" ]
+  then
+    scripts/ensure_nand_extracted
+
+  elif [ "$enterLetter" == "x" ]
+  then
+    exit 0
+  else
+    echo "错误选项"
+    continue
+  fi
+
+  scripts/press_enter
+
+done

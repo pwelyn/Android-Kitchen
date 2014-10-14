@@ -1,0 +1,101 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+if [ -d WORKING_* ]
+then
+  echo "发现 Working 文件夹"
+else
+  echo "未发现 Working 文件夹!"
+  exit 0
+fi
+
+clear
+cd WORKING_*
+cd META-INF/com/google/android
+
+echo
+
+if [ -e update-script ]
+then
+
+  grep_wipe=`grep -c "format .*DATA:" update-script`
+
+  if [ "$grep_wipe" == "0" ]
+  then
+
+    echo "当前 ROM 在刷机时将不会进行 WIPE 数据"
+    echo -n "你想更改 wipe 状态(y/n)? (默认: n): "
+
+    read do_wipe
+    echo
+
+    if [ "$do_wipe" == "y" ]
+    then
+
+      if [ `grep -c "delete DATA" update-script` != 0 ]
+      then
+        #
+        # 检查需要的行不标准, 例如： format yaffs2 DATA:
+        #
+        fmt_line=`grep -om 1 "format .*SYSTEM:" update-script | sed -e 's/SYSTEM/DATA/g'`
+
+        #
+        # 更改出现的第一个
+        #
+        sed -i -e '0,/delete DATA/s/delete DATA/'"$fmt_line"'\ndelete DATA/' update-script
+      else
+        sed -i -e 's/format\(.*\)SYSTEM:[ ]*[\n]*/format\1SYSTEM:\nformat\1DATA:\n/' update-script
+      fi
+
+      grep_wipe=`grep -c "format .*DATA:" update-script`
+      if [ "$grep_wipe" == "1" ]
+      then
+        echo "OK, ROM 现在将wipe你的数据"
+      else
+        echo "错误: 无法修改 update-script 脚本"
+      fi
+    else
+      echo "OK, 没有任何修改"
+    fi
+
+
+  else
+    echo "当前 ROM 在刷机时将会进行 WIPE 数据"
+    echo -n "你想更改 wipe 状态(y/n)? (默认: n): "
+
+    read dont_wipe
+    echo
+
+    if [ "$dont_wipe" == "y" ]
+    then
+      sed -i -e 's/format .*DATA:[ ]*[\n]*//g' update-script
+
+      grep_wipe=`grep -c "format .*DATA:" update-script`
+      if [ "$grep_wipe" == "0" ]
+      then
+        echo "OK, ROM 将不再 wipe 你的数据"
+      else
+        echo "错误：无法修改 update-script 脚本"
+      fi
+    else
+      echo "OK, 没有任何修改"
+    fi
+
+  fi
+
+else
+  echo "错误: 未发现 update-script 脚本!"
+fi
+
+cd ../../../../..
+
+scripts/fix_update_script_blanks

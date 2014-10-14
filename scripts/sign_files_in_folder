@@ -1,0 +1,106 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+date_str=`date '+%m%d%y_%H%M%S'`
+files_dir=sign_files_$date_str
+
+echo
+echo "创建文件夹 `pwd`/$files_dir ..."
+mkdir $files_dir
+
+echo
+echo "---> 请放置您的 APK 或 ZIP 文件（支持多文件）到上面创建的文件夹 <--"
+
+scripts/press_enter
+
+cd $files_dir
+grep_apk=`find . | grep -i \\.apk$ | sort -f`
+grep_zip=`find . | grep -i \\.zip$ | sort -f`
+grep_files="$grep_apk $grep_zip"
+
+if [ "$grep_files" != " " ]
+then
+
+  cp ../tools/signapk_files/testkey.* .
+  cp ../tools/signapk_files/signapk.jar .
+
+  echo
+
+  for filename in $grep_files
+  do
+
+    filename=`echo $filename | sed -e 's/\.\///g'`
+
+    if [ ! -e $filename ]
+    then
+
+      echo "错误: 未发现 '$filename' 文件"
+
+      grep_apk2=`echo $filename | grep -i \\.apk$`
+      grep_zip2=`echo $filename | grep -i \\.zip$`
+
+      if [ "$grep_apk2" == "" ] && [ "$grep_zip2" == "" ]
+      then
+        echo "错误: 文件名中有空格 - 此操作系统不能完全支持"
+      fi
+
+      break
+
+    fi
+
+
+    echo "签名 $filename ..."
+
+    final_file="signed_$filename"
+    final_file=`echo $final_file | sed -e 's/unsigned/(u)/g'`
+    java -jar signapk.jar testkey.x509.pem testkey.pk8 $filename $final_file
+    res=$?
+
+    if [ "$res" == "0" ]
+    then
+      rm -f $filename
+
+      # 不要将符号前缀添加到 APK 文件
+      if [ "`echo $filename | grep -i \\.apk$`" != "" ]
+      then
+        mv -f $final_file $filename
+      fi
+
+    else
+      echo "$filename 签名错误"
+      echo
+      rm -f $final_file
+    fi
+
+  done
+
+  rm -f testkey.*
+  rm -f signapk.jar
+
+  echo
+  echo
+  echo "文件夹列表:"
+  echo "---------------"
+  echo
+  ls -X
+
+  cd ..
+
+else
+  echo "错误: 未发现 *.apk 或 *.zip !"
+  echo
+  cd ..
+  echo "删除 $files_dir 文件夹"
+  rm -rf $files_dir
+  exit 0
+fi
+echo

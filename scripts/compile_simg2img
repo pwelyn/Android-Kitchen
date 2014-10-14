@@ -1,0 +1,48 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+simg2img_file=simg2img
+if [ `uname | grep CYGWIN` ]
+then
+  simg2img_file=$simg2img_file.exe
+fi
+
+if [ -e tools/samsung_files/simg2img_files/$simg2img_file ]
+then
+  echo "发现 $simg2img_file"
+else
+  echo "编译 simg2img ..."
+
+  if [ `uname | grep CYGWIN` ]
+  then
+    if [ `grep -c __CYGWIN__ tools/samsung_files/simg2img_files/simg2img.c` == 0 ]
+    then
+      echo "(不过首先，需要添加Cygwin的路径为了simg2img.c)"
+      sed -i -e '0,/#include/s//\/* dsixda patch *\/\n#if defined(__CYGWIN__)\n#  define lseek64 lseek\n#  define ftruncate64 ftruncate\n#endif\n\n#include/g' \
+        tools/samsung_files/simg2img_files/simg2img.c
+    fi
+  fi
+
+  cd tools/samsung_files/simg2img_files
+  gcc -c sparse_crc32.c
+  gcc sparse_crc32.o simg2img.c -w -o simg2img
+  rm *.o
+  cd ../../..
+
+  if [ -e tools/samsung_files/simg2img_files/$simg2img_file ]
+  then
+    echo "$simg2img_file 编译成功"
+  else
+    echo "错误: $simg2img_file 编译失败"
+    exit 1
+  fi
+fi
+
+exit 0

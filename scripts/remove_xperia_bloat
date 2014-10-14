@@ -1,0 +1,44 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+cd WORKING_*
+working_dir=`pwd`
+
+app_dir=system/etc/product/applications
+
+if [ -d $app_dir ]
+then
+
+  apk_files=`find $app_dir -name *.apk`
+
+  if [ "$apk_files" != "" ]
+  then
+    echo
+    echo "在 $app_dir 发现索尼 'bloatware' 应用程序:"
+    echo
+    for apk in $apk_files
+    do
+      echo $apk
+    done
+
+    echo
+    echo -n "从你的 Working 文件夹删除他们 (y/n)? (默认: y): "
+
+    read do_delete
+    echo
+
+    if [ "$do_delete" != "n" ]
+    then
+      rm -vf $apk_files
+    fi
+  fi
+fi
+
+cd ..

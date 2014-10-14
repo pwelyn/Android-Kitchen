@@ -1,0 +1,59 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# This script has two parameters
+#
+# $1 = folder of boot.img (optional)
+# $2 = offset in boot.img to kernel (in decimal) (optional)
+#       - can only be specified if $1 also specified
+#
+
+working_folder=$1
+dec_offset=$2
+
+if [ "$working_folder" == "" ]
+then
+  cd WORKING_*
+  working_folder=`pwd`
+  cd ..
+
+  if [ "$dec_offset" == "" ]
+  then
+    dec_offset=`scripts/get_boot_img_page_size $working_folder`
+  fi
+fi
+
+
+base_dir=`pwd`
+
+# Check for MT65XX
+cd $working_folder
+
+if [ ! -e boot.img ]
+then
+  cd $base_dir
+  echo "错误: 未发现 boot.img"
+  exit 0
+fi
+
+# Location of "KERNEL" string
+str_offset=$(($dec_offset+8))
+if [ "`od -A n -h -j $str_offset -N 6 boot.img | sed 's/ //g'`" \
+    == "454b4e524c45" ]
+then
+  echo
+  echo "检测到 MT65xx kernel header"
+  cd $base_dir
+  exit 1
+fi
+
+cd $base_dir
+exit 0

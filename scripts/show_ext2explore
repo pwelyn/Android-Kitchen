@@ -1,0 +1,42 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+img_dir=$1
+img_file=$2
+
+dos_path=`cygpath -wp $img_dir`
+
+echo
+echo "#####################################################################"
+echo
+echo " 请从 $img_file 解压文件前阅读此说明:"
+echo
+echo " 1) 如果出现 'Cannot Read Disk' 警告对话框请忽略(按 'OK')"
+echo
+echo " 2) 当 Ext2Explore 出现时，使用 'File->Open Image File' 打开"
+echo "    $dos_path\\$img_file"
+echo
+echo " 3) 读取后，右击显示在左边框架的新图标，并选择 Save 保存"
+echo
+echo " 4) 选择 $dos_path"
+echo
+echo " 5) 等待解压完成时关闭 Ext2Explore"
+echo
+echo "#####################################################################"
+echo
+
+tools/ext2read_windows/ext2explore.exe &
+
+echo
+echo ">>>> 按回车键之前请完成以上步骤!<<<<"
+echo
+
+scripts/press_enter

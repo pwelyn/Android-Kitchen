@@ -1,0 +1,52 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = image 镜像文件所处的文件夹位置
+# $2 = image 镜像文件的名称 (例如 data.img 或 system.img)
+#
+# 如果没有指定，脚本假定 system.img 位于工作文件夹
+#
+
+if [ `uname | grep CYGWIN` ]
+then
+  unyaffs_file=unyaffs.exe
+else
+  unyaffs_file=unyaffs
+fi
+
+if [ -e tools/unyaffs_files/$unyaffs_file ]
+then
+  rm -f tools/unyaffs_files/$unyaffs_file
+fi
+
+scripts/check_yaffs_sizes $1 $2
+
+if [ "$?" == "1" ]
+then
+  exit 1
+fi
+
+echo "编译 unyaffs ..."
+cd tools/unyaffs_files
+gcc -o unyaffs unyaffs.c
+cd ../..
+
+if [ -e tools/unyaffs_files/$unyaffs_file ]
+then
+  echo "unyaffs 编译成功"
+else
+  echo "错误: unyaffs 编译失败!"
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,108 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+echo
+echo "此过程将从一个提供的ROM中提取kernel和modules。"
+echo
+echo "注意1: 在我们开始之前将被移除任何现有的 MY_KERNEL 文件夹"
+echo
+echo "注意2: 如果 Working 文件夹已经存在"
+echo "       它将备份和内核 extractio 后再恢复."
+echo
+echo "获取新的 ROM，并将其复制到文件夹 'original_update' 做好准备"
+
+scripts/press_enter
+
+if [ -d WORKINGTEMP ]
+then
+  rm -rf WORKINGTEMP
+fi
+
+if [ -d WORKING_* ]
+then
+  mkdir WORKINGTEMP
+  mv WORKING_* WORKINGTEMP 2>/dev/null
+
+  if [ "$?" == "1" ]
+  then
+    echo "错误: Working 文件夹在使用，请确保其中文件或文件夹没有打开。"
+    rm -rf WORKINGTEMP
+    exit 0
+  fi
+
+fi
+
+scripts/extract_kernel_and_modules
+
+if [ -d MY_KERNEL ]
+then
+
+  if [ -d MY_DEVICE_WORKING/system ]
+  then
+
+    if [ `ls MY_DEVICE_WORKING/system | grep -m 1 prop` ]
+    then
+
+      echo
+      echo "复制 *.prop ..."
+
+      if [ ! -d MY_KERNEL/system ]
+      then
+        mkdir MY_KERNEL/system
+      fi
+
+      cp -v MY_DEVICE_WORKING/system/*.prop MY_KERNEL/system/
+    fi
+
+  fi
+
+
+  rm MY_KERNEL/boot.img
+
+  echo
+  echo "----------------------------------------------------------------------"
+  echo
+  echo "以下文件/文件夹复制到 MY_KERNEL 文件夹:"
+  echo
+  ls MY_KERNEL
+
+  if [ -d MY_KERNEL/system ]
+  then
+    echo
+    echo "在 /system 文件夹中:"
+    ls MY_KERNEL/system
+  fi
+
+  echo
+  echo "----------------------------------------------------------------------"
+  echo
+  echo "可以将 zImage 添加到 BOOT-EXTRACTED 文件夹"
+  echo "在厨房里的 Working 文件夹 boot.img 解压缩时创建的"
+  echo
+
+else
+  echo "错误: Kernel 没有提取"
+fi
+
+if [ -d MY_DEVICE_WORKING ]
+then
+  echo "删除此 ROM 的 Working 文件夹 ..."
+  rm -rf MY_DEVICE_WORKING
+fi
+
+if [ -d WORKINGTEMP ]
+then
+  working_folder=`ls WORKINGTEMP`
+  echo "还原以前的 Working 文件夹 $working_folder ..."
+  mv WORKINGTEMP/* .
+  rmdir WORKINGTEMP
+fi

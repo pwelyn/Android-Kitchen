@@ -1,0 +1,186 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 这个脚本有三个参数：
+#
+# $1 = 'override' - add the busybox info to the update-script no matter what
+#    = 'amend'    - use the installbusybox file, which is supported by update-script
+#                   - use this only when ROM is being built with update-script
+#
+
+#
+# Don't add 'installbusybox' script if going to convert to updater-script when 
+# buiding ROM; it's too much clutter -- use the installation command directly.
+#
+# The installation command uses 'run_program' and a set of arguments, which 
+# would only work with an updater-script.  On the other hand, the update-
+# script uses the 'installbusybox' script, which is executed by run_program 
+# but requires no arguments.
+#
+
+
+if [ "$1" == "amend" ]
+then
+  convert_to_edify=0
+else
+  convert_to_edify=1
+fi
+
+cd WORKING_*
+cd META-INF/com/google/android
+
+echo
+
+if [ -e update-script ]
+then
+
+  if [ "$convert_to_edify" == "0" ]
+  then
+
+    # Exit if all busybox symlinks already exist in update-script, or a
+    # busybox installer script exists in base dir of working folder
+    if [ "`grep -c \"symlink busybox\" update-script`" != "0" ] || \
+      [ "`grep -m 1 \"busybox ln\" ../../../../*`" != "" ] || \
+      [ "`grep -m 1 \"busybox --install\" ../../../../*`" != "" ]
+    then
+      cd ../../../../..
+      exit 0
+    fi
+
+    #
+    # Remove existing busybox references in update-script
+    #
+    search_run=`grep -c "run_program.*xbin/busybox --install" update-script`
+    search_perm=`grep -c "set_perm.*xbin/busybox" update-script`
+    search_symlinks=`grep -c "symlink.*xbin/busybox " update-script`
+
+    if [ $search_run -gt 0 ] || [ $search_perm -gt 0 ] || [ $search_symlinks -gt 0 ]
+    then
+      echo "删除 update-script 脚本中的 /system/xbin/busybox 相关引用"
+      sed -i \
+        -e '/set_perm.*xbin\/busybox/d' \
+        -e '/symlink.*xbin\/busybox/d' \
+        -e '/run_program.*xbin\/busybox --install/d' \
+      update-script
+    fi
+
+    echo "添加 installbusybox 到 Working 文件夹中"
+    cp ../../../../../tools/busybox_files/installbusybox ../../../../
+
+    echo "添加 installbusybox 到 update-script 脚本"
+
+    if [ `grep -c "set_perm_recursive.*SYSTEM:xbin[ ]*$" update-script` != 0 ]
+    then
+      sed -i -e 's/set_perm_recursive\(.*\)SYSTEM:xbin[ ]*$/set_perm_recursive\1SYSTEM:xbin\nset_perm 0 1000 0755 SYSTEM:xbin\/busybox\nrun_program PACKAGE:installbusybox\n/' update-script
+
+    elif [ `grep -c "init.goldfish.sh" update-script` != 0 ]
+    then
+      sed -i -e 's/set_perm 0 2000 0550 SYSTEM:etc\/init.goldfish.sh/set_perm 0 2000 0550 SYSTEM:etc\/init.goldfish.sh\nset_perm 0 1000 0755 SYSTEM:xbin\/busybox\nrun_program PACKAGE:installbusybox/g' update-script
+
+    elif [ `grep -c "write_raw_image .*:boot.img BOOT:" update-script` != 0 ]
+    then
+      sed -i -e 's/write_raw_image \(.*:boot.img\) BOOT:/set_perm 0 1000 0755 SYSTEM:xbin\/busybox\nrun_program PACKAGE:installbusybox\nwrite_raw_image \1 BOOT:/' update-script
+    else
+      echo "set_perm 0 1000 0755 SYSTEM:xbin/busybox" >> update-script
+      echo "run_program PACKAGE:installbusybox" >> update-script
+    fi
+
+    if [ `grep -c installbusybox update-script` == 0 ]
+    then
+      echo "错误: installbusybox 未添加到 update-script 脚本!"
+    else
+
+      if [ ! -e ../../../../system/bin/busybox ]
+      then
+        echo "添加代码链接到 /system/bin/busybox"
+        sed -i -e 's/set_perm 0 1000 0755 SYSTEM:xbin\/busybox/set_perm 0 1000 0755 SYSTEM:xbin\/busybox\nsymlink \/system\/xbin\/busybox SYSTEM:bin\/busybox/g' update-script
+      fi
+    fi
+
+
+  ######################################################################
+  # The update-script will be converted to updater-script when built
+  ######################################################################
+  elif [ "$convert_to_edify" == "1" ]
+  then
+
+    # Remove the installbusybox script with just a single call in the updater-script (which
+    # is not compatible with update-scripts)
+    if [ -e ../../../../installbusybox ]
+    then
+      echo "删除 update-script 脚本中的 BusyBox 和 installbusybox 相关引用"
+      sed -i \
+        -e '/set_perm.*bin\/busybox/d' \
+        -e '/symlink.*bin\/busybox/d' \
+        -e '/run_program.*installbusybox/d' \
+      update-script
+
+      if [ -e ../../../../installbusybox ]
+      then
+        echo "删除 installbusybox"
+        rm -f ../../../../installbusybox
+      fi
+
+      echo
+
+    elif [[ "$1" != "override" ]] && [[ `grep -c "symlink busybox" update-script` != 0 || `grep -c "symlink /system/xbin/busybox " update-script` != 0 ]]
+    then
+      echo "在 update-script 脚本中已包含 BusyBox"
+
+    elif [[ "$1" != "override" ]] && [[ "`grep -m 1 \"busybox ln\" ../../../../* 2>/dev/null`" != "" || "`grep -m 1 \"busybox --install\" ../../../../* 2>/dev/null`" != "" ]]
+    then
+
+      echo "当前脚本检测到一个已包含有 BusyBox 符号链接"
+      echo "update-script 不需要更改"
+
+    else
+
+    echo "添加 BusyBox 安装命令到 update-script 脚本中"
+
+      if [ `grep -c "set_perm_recursive.*SYSTEM:xbin[ ]*$" update-script` != 0 ]
+      then
+        sed -i -e 's/set_perm_recursive\(.*\)SYSTEM:xbin[ ]*$/set_perm_recursive\1SYSTEM:xbin\nset_perm 0 1000 0755 SYSTEM:xbin\/busybox\nrun_program PACKAGE:system\/xbin\/busybox --install -s SYSTEM:xbin\n/' update-script
+
+      elif [ `grep -c "init.goldfish.sh" update-script` != 0 ]
+      then
+        sed -i -e 's/set_perm 0 2000 0550 SYSTEM:etc\/init.goldfish.sh/set_perm 0 2000 0550 SYSTEM:etc\/init.goldfish.sh\nset_perm 0 1000 0755 SYSTEM:xbin\/busybox\nrun_program PACKAGE:system\/xbin\/busybox --install -s SYSTEM:xbin\n/g' update-script
+
+      elif [ `grep -c "write_raw_image .*:boot.img BOOT:" update-script` != 0 ]
+      then
+        sed -i -e 's/write_raw_image \(.*:boot.img\) BOOT:/set_perm 0 1000 0755 SYSTEM:xbin\/busybox\nrun_program PACKAGE:system\/xbin\/busybox --install -s SYSTEM:xbin\nwrite_raw_image \1 BOOT:/' update-script
+
+      else
+        echo "set_perm 0 1000 0755 SYSTEM:xbin/busybox" >> update-script
+        echo "run_program PACKAGE:system\/xbin\/busybox --install -s SYSTEM:xbin" >> update-script
+      fi
+
+      if [ `grep -c "busybox --install -s" update-script` == 0 ]
+      then
+      echo "错误: BusyBox 没有添加到 update-script 脚本中!"
+      else
+
+        if [ ! -e ../../../../system/bin/busybox ]
+        then
+          echo "添加符号链接到 /system/bin/busybox"
+          sed -i -e 's/set_perm 0 1000 0755 SYSTEM:xbin\/busybox/set_perm 0 1000 0755 SYSTEM:xbin\/busybox\nsymlink \/system\/xbin\/busybox SYSTEM:bin\/busybox/g' update-script
+        fi
+      fi
+    fi
+
+  fi
+
+else
+  echo "错误: 未发现 update-script 脚本!"
+fi
+
+cd ../../../../..
+
+scripts/fix_update_script_blanks

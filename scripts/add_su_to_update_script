@@ -1,0 +1,56 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+cd WORKING_*
+cd META-INF/com/google/android
+
+if [ -e update-script ]; then
+	# 删除所有已知的su行
+	echo "清理老版本 su 项"
+	for su in 'bin/su' '.ext/.su' 'daemonsu' 'install-recovery.sh'; do
+		grep -vi "$su" update-script > tmp
+		mv tmp update-script
+	done
+
+	echo "添加 su 项"
+	echo "set_perm 0 0 06755 SYSTEM:xbin/su" >> update-script
+	echo "ch_con SYSTEM:xbin/su" >> update-script
+	echo "ch_con SYSTEM:app/Superuser.apk" >> update-script
+	if [ -e ../../../../system/etc/install-recovery.sh ]; then
+	echo "set_perm 0 0 0755 SYSTEM:etc/install-recovery.sh" >> update-script
+	echo "ch_con SYSTEM:etc/install-recovery.sh" >> update-script
+	fi
+	if [ -e ../../../../system/xbin/daemonsu ]; then
+	echo "set_perm 0 0 0755 SYSTEM:xbin/daemonsu" >> update-script
+	echo "ch_con SYSTEM:xbin/daemonsu" >> update-script
+	fi
+	if [ -e ../../../../system/bin/.ext/.su ]; then
+	echo "set_perm 0 0 0777 SYSTEM:bin/.ext" >> update-script
+	echo "set_perm 0 0 06755 SYSTEM:bin/.ext/.su" >> update-script
+	echo "ch_con SYSTEM:bin/.ext/.su" >> update-script
+	echo "run_program SYSTEM:xbin/su --install" >> update-script
+	fi
+	if [ -e ../../../../system/etc/.installed_su_daemon ]; then
+	echo "set_perm 0 0 0644 SYSTEM:etc/.installed_su_daemon" >> update-script
+	echo "ch_con SYSTEM:etc/init.d/.installed_su_daemon" >> update-script
+	fi
+	if [ -e ../../../../system/etc/init.d/99SuperSUDaemon ]; then
+	echo "set_perm 0 0 0755 SYSTEM:etc/init.d/99SuperSUDaemon" >> update-script
+	echo "ch_con SYSTEM:etc/init.d/99SuperSUDaemon" >> update-script
+	fi
+	echo "symlink /system/xbin/su SYSTEM:bin/su" >> update-script
+else
+  echo "错误: 未发现 update-script 脚本"
+fi
+
+cd ../../../../..
+
+scripts/fix_update_script_blanks

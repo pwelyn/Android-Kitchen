@@ -1,0 +1,70 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+if [ "$1" == "" ]
+then
+  clear
+
+elif [ "$1" == "show_help" ]
+then
+
+  clear
+  echo
+  echo "------------------------------------------------------------------"
+  echo
+  echo "复制应用程序到 /data/app 文件夹 （替代 /system/app），这样你可以"
+  echo "在你的设备上轻松升级或卸载应用程序。"
+  echo
+  echo "------------------------------------------------------------------"
+  echo
+
+fi
+
+if [ "$1" != "dont_ask" ]
+then
+  echo -n "继续并添加 /data/app 功能(y/n)? (默认: y): "
+  read do_app
+
+  if [ "$do_app" == "n" ]
+  then
+    exit 0
+  fi
+fi
+
+echo
+
+if [ -d WORKING_* ]
+then
+  echo "发现 Working 文件夹"
+  cd WORKING_*
+else
+  echo "未发现 Working 文件夹，你必须先创建一个!"
+  exit 0
+fi
+
+if [ -d data/app ]
+then
+  echo "/data/app 已经存在"
+else
+  echo "创建 /data/app"
+  mkdir -p data/app
+fi
+
+if [ ! -e data/app/placeholder ]
+then
+  touch data/app/placeholder
+fi
+
+cd ..
+scripts/add_data_app_to_update_script
+
+echo
+echo "添加 /data/app 完成"

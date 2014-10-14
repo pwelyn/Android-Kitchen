@@ -1,0 +1,99 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+if [ -d WORKING_* ]
+then
+  echo "发现 Working 文件夹"
+else
+  echo "未发现 Working 文件夹!"
+  exit 0
+fi
+
+clear
+cd WORKING_*
+
+if [ ! -e system/build.prop ]
+then
+  echo "错误: 未发现 build.prop 文件"
+  cd ..
+  exit 0
+fi
+
+cd system
+
+echo
+
+if [ `grep -c ro.product.version build.prop` == 0 ]
+then
+  id_var=ro.build.display.id
+else
+  id_var=ro.product.version
+fi
+
+
+cd ../..
+current_name=`scripts/get_build_prop_val $id_var`
+
+if [ "$current_name" == "UNKNOWN" ]
+then
+
+  echo "错误: 无法在 build.prop 文件中找到 $id_var"
+  cd ../..
+  exit 0
+fi
+
+
+echo
+echo "当前 ROM 的名称是:"
+echo
+echo "$current_name"
+echo
+echo
+echo -n "你想将其重命名(y/n)? (默认: y): "
+
+read do_rename
+echo
+
+if [ "$do_rename" == "n" ]
+then
+  echo "OK, 没有更改"
+
+else
+
+  echo -n "请输入新的 ROM 名称: "
+  read new_name
+
+  if [ "$new_name" == "" ]
+  then
+    echo
+    echo "错误: 无效的名字"
+  else
+
+    scripts/set_build_prop_val $id_var "$new_name"
+    current_name=`scripts/get_build_prop_val $id_var`
+
+    echo
+    echo
+  echo "在 build.prop 中, $id_var 将重新设置为:"
+    echo
+    echo "$current_name"
+
+    if [ "$current_name" != "$new_name" ]
+    then
+      echo
+    echo "警告: 指定的名称不符合规定名"
+    fi
+  fi
+
+fi
+
+echo

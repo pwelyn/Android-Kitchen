@@ -1,0 +1,92 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+#
+# 此脚本有两个可选参数:
+#
+# $1 = kernel offset (in decimal format) - this parameter is mandatory
+# $2 = type of device (current options: mt65xx) - this parameter is optional
+#
+
+dec_offset=$1
+type=$2
+
+if [ "$dec_offset" == "" ]
+then
+  echo "错误: 未指定 内核偏移（页面大小）"
+  exit 1
+fi
+
+pad_line_num=`sed -n -e '/static unsigned char padding/{=;q}' tools/mkboot/mkbootimg.c`
+pgsz_line_num=`sed -n -e '/    unsigned pagesize = /{=;q}' tools/mkboot/mkbootimg.c`
+
+str=`sed ''$pad_line_num'q;d' tools/mkboot/mkbootimg.c`
+if [ "$str" != "static unsigned char padding[$dec_offset] = { 0, };" ]
+then
+  echo "在 mkbootimg.c 设置 offset=$dec_offset, 第$pad_line_num行"
+  sed -i -e ''$pad_line_num's/.*/static unsigned char padding\['$dec_offset'\] = { 0, };/' tools/mkboot/mkbootimg.c
+fi
+
+str=`sed ''$pgsz_line_num'q;d' tools/mkboot/mkbootimg.c`
+if [ "$str" != "    unsigned pagesize = $dec_offset;" ]
+then
+  echo "在 mkbootimg.c设置 offset=$dec_offset, 第$pgsz_line_num行"
+  sed -i -e ''$pgsz_line_num's/.*/    unsigned pagesize = '$dec_offset';/' tools/mkboot/mkbootimg.c
+fi
+
+
+# Kernel offset in boot.img
+str=`sed '23q;d' tools/extract_boot_files/extract-kernel.pl`
+if [ "$str" != "\$pageSize = $dec_offset;" ]
+then
+  echo "在 extract-kernel.pl设置 offset=$dec_offset, 第23行"
+  sed -i -e '23s/.*/$pageSize = '$dec_offset';/' tools/extract_boot_files/extract-kernel.pl
+fi
+
+
+# Chop kernel header
+if [ "$type" == "mt65xx" ]
+then
+  new_str="\$kernel = substr(\$kernel, 512);"
+else
+  new_str=""
+fi
+str=`sed '25q;d' tools/extract_boot_files/extract-kernel.pl`
+if [ "$str" != "$new_str" ]
+then
+  echo "修改 extract-kernel.pl, 第 25 行"
+  sed -i -e '25s/.*/'"$new_str"'/' tools/extract_boot_files/extract-kernel.pl
+fi
+
+
+# Ramdisk offset in boot.img
+str=`sed '23q;d' tools/extract_boot_files/extract-ramdisk.pl`
+if [ "$str" != "\$pageSize = $dec_offset;" ]
+then
+  echo "在 extract-ramdisk.pl设置 offset=$dec_offset, 第23行"
+  sed -i -e '23s/.*/$pageSize = '$dec_offset';/' tools/extract_boot_files/extract-ramdisk.pl
+fi
+
+
+# Chop ramdisk header
+if [ "$type" == "mt65xx" ]
+then
+  new_str="\$ram1 = substr(\$ram1, 512);"
+else
+  new_str=""
+fi
+str=`sed '31q;d' tools/extract_boot_files/extract-ramdisk.pl`
+if [ "$str" != "$new_str" ]
+then
+  echo "修改 extract-ramdisk.pl, 第 31 行"
+  sed -i -e '31s/.*/'"$new_str"'/' tools/extract_boot_files/extract-ramdisk.pl
+fi
+
+
+exit 0

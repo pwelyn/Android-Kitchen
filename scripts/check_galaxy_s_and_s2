@@ -1,0 +1,23 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+`scripts/check_galaxy_s`
+sgs=$?
+
+`scripts/check_galaxy_s2`
+sgs2=$?
+
+if [ "$sgs" == "1" ] || [ "$sgs2" == "1" ]
+then
+  exit 1
+else
+  exit 0
+fi

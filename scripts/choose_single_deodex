@@ -1,0 +1,86 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+clear
+
+
+echo
+
+api_level=`scripts/get_api_level`
+
+cd WORKING_*
+
+grep_cmd=`find . | grep \\.odex$ | sort -f`
+
+if [ "$grep_cmd" == "" ]
+then
+  echo "错误: 未发现需要合并的 odex 文件!"
+  cd ..
+  scripts/press_enter
+  exit 0
+fi
+
+count=0
+
+rm -f ../temp.list
+
+echo >> ../temp.list
+echo "所有 ODEX 文件:" >> ../temp.list
+echo >> ../temp.list
+
+for filename in $grep_cmd
+do
+  count=$(($count+1))
+
+  # 文件名存储在一个数组
+  file_array[$count]=$filename
+  echo "  ($count) $filename" >> ../temp.list
+done
+
+more ../temp.list
+rm -f ../temp.list
+
+echo
+echo -n "输入文件编号 (0 = 取消): "
+
+read enterNumber
+
+if [ "$enterNumber" == "0" ]
+then
+  cd ..
+  exit 0
+
+# 验证输入是一个数字
+elif [ "`echo $enterNumber | sed 's/[0-9]*//'`" == "" ]
+then
+
+  file_chosen=${file_array[$enterNumber]}
+
+  if [ "$file_chosen" == "" ]
+  then
+    cd ..
+    exit 0
+  fi
+
+  cd ..
+  version=`scripts/get_smali_version`
+  cd WORKING_*
+  cp -f ../tools/deodex_files/baksmali-$version.jar baksmali.jar
+  cp -f ../tools/deodex_files/smali-$version.jar smali.jar
+
+  ../scripts/do_deodex_file $api_level $file_chosen system/framework
+  result=$?
+  rm -f *smali.jar
+
+fi
+
+cd ..
+scripts/press_enter

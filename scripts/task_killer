@@ -1,0 +1,267 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+scripts/check_galaxies
+
+if [ "$?" == "1" ]
+then
+  echo
+  echo "本定制功能不支持这个 ROM"
+  exit 0
+fi
+
+scripts/ensure_boot_extracted
+
+if [ -d BOOT-EXTRACTED ]
+then
+  if [ -d WORKING_* ]
+  then
+
+    if [ -d BOOT-EXTRACTED/boot.img-ramdisk ]
+    then
+      cd BOOT-EXTRACTED/boot.img-ramdisk
+    else
+      echo "错误: 未发现 BOOT-EXTRACTED/boot.img-ramdisk 文件夹!"
+      exit 0
+    fi
+
+  else
+    exit 0
+  fi
+else
+  exit 0
+fi
+
+
+clear
+
+
+#
+# 在姜饼中更改内存变量
+#
+
+list_type=old
+init_params=(FOREGROUND_APP_MEM VISIBLE_APP_MEM SECONDARY_SERVER_MEM HIDDEN_APP_MEM CONTENT_PROVIDER_MEM EMPTY_APP_MEM)
+count_list="0 1 2 3 4 5"
+default_vals=(1536 2048 4096 5120 15360 25600)
+
+if [ `grep -c CONTENT_PROVIDER_MEM init.rc` == 0 ]
+then
+  if [ `grep -c PERCEPTIBLE_APP_MEM init.rc` -gt 0 ]
+  then
+    list_type=new
+    init_params=(FOREGROUND_APP_MEM VISIBLE_APP_MEM PERCEPTIBLE_APP_MEM HEAVY_WEIGHT_APP_MEM SECONDARY_SERVER_MEM HIDDEN_APP_MEM EMPTY_APP_MEM)
+    count_list="0 1 2 3 4 5 6"
+    default_vals=(2048 3072 4096 4096 6144 7168 25600)
+  fi
+fi
+
+
+echo
+echo "当前:"
+echo
+
+for i in $count_list
+do
+
+  init_param=${init_params[${i}]}
+
+  init_val=`grep $init_param init.rc | grep -v [#] | sed 's/[ ]*setprop ro.'$init_param'[ ]*//'`
+  if [ "$init_val" == "" ]
+  then
+    init_val="?"
+    str="NOT FOUND"
+  else
+    str=$init_val
+  fi
+
+  init_vals=( ${init_vals[@]} $init_val )
+
+  echo " $init_param = $str"
+
+  if [ "$str" == "NOT FOUND" ]
+  then
+    echo
+    echo "错误: 无法获得需要的参数"
+    cd ../..
+    rm -rf BOOT-EXTRACTED
+    exit 0
+  fi
+
+done
+
+
+echo
+echo "您将会被问及上述每个参数的改变值。如果您想要开启 Task Killer Tweak"
+echo "（运行内存调整优化），但是并不确定改变值，则仅需要在提示出现时按下"
+echo "回车键，此脚本将会尝试自动为你设定。"
+echo
+echo "任何想要取消并退出的时候请键入 x ，则任何参数的改变值将不会保存。"
+echo
+
+for i in $count_list
+do
+
+  if [ "${init_vals[${i}]}" == "?" ]
+  then
+    read_val="?"
+  else
+
+    echo -n "${init_params[${i}]} (默认调整: ${default_vals[${i}]}): "
+    read read_val
+
+    if [ "$read_val" == "x" ]
+    then
+			echo "Aborting"
+			cd ../..
+			rm -rf BOOT-EXTRACTED
+      exit 0
+    elif [ "$read_val" == "" ]
+    then
+      read_val=${default_vals[${i}]}
+    fi
+  fi
+
+  read_vals=( ${read_vals[@]} $read_val )
+
+done
+
+
+clear
+
+
+echo
+echo "你想要以下:"
+echo
+
+changes_made=0
+
+for i in $count_list
+do
+
+  if [ "${init_vals[${i}]}" == "?" ]
+  then
+    continue
+  fi
+
+  init_param=${init_params[${i}]}
+  init_val=${init_vals[${i}]}
+  read_val=${read_vals[${i}]}
+
+  if [ "$init_val" == "$read_val" ]
+  then
+    echo " $init_param = $init_val"
+  else
+    changes_made=1
+    echo " $init_param = $init_val --> $read_val"
+  fi
+  echo
+
+done
+
+
+
+echo
+
+if [ $changes_made == 0 ]
+then
+  echo "没有任何改变。"
+  cd ../..
+  rm -rf BOOT-EXTRACTED
+  exit 0
+fi
+
+
+echo -n "这些值是否确定 (y/n)? (默认: y): "
+
+read promptOk
+
+if [ "$promptOk" == "n" ]
+then
+  echo "取消"
+  cd ../..
+  rm -rf BOOT-EXTRACTED
+  exit 0
+fi
+
+
+#
+# Write to file
+#
+
+for i in $count_list
+do
+
+  if [ "${init_vals[${i}]}" == "?" ]
+  then
+    continue
+  fi
+
+  export NEW_INIT_VAL=${read_vals[${i}]}
+  export INIT_PARAM=${init_params[${i}]}
+  export INIT_VAL=${init_vals[${i}]}
+
+
+  perl -pi -e 's/ro.$ENV{"INIT_PARAM"} $ENV{"INIT_VAL"}/ro.$ENV{"INIT_PARAM"} $ENV{"NEW_INIT_VAL"}/g' init.rc
+
+done
+
+if [ $list_type == old ]
+then
+  export VAL0=${read_vals[0]}
+  export VAL1=${read_vals[1]}
+  export VAL2=${read_vals[2]}
+  export VAL3=${read_vals[3]}
+  export VAL4=${read_vals[4]}
+  export VAL5=${read_vals[5]}
+else
+  export VAL0=${read_vals[0]}
+  export VAL1=${read_vals[1]}
+  export VAL2=${read_vals[2]}
+  export VAL3=${read_vals[4]}
+  export VAL4=${read_vals[5]}
+  export VAL5=${read_vals[6]}
+fi
+
+  perl -pi -e 's/parameters\/minfree[^\n]*/parameters\/minfree $ENV{"VAL0"},$ENV{"VAL1"},$ENV{"VAL2"},$ENV{"VAL3"},$ENV{"VAL4"},$ENV{"VAL5"}/' init.rc
+
+if [ -e init.rc.bak ]
+then
+  rm init.rc.bak
+fi
+
+
+
+echo
+echo "保存到文件:"
+echo
+
+for i in $count_list
+do
+
+  if [ "${init_vals[${i}]}" == "?" ]
+  then
+    continue
+  fi
+
+  init_param=${init_params[${i}]}
+  init_val=`grep $init_param init.rc | grep -v [#] | sed 's/[ ]*setprop ro.'$init_param'[ ]*//'`
+  init_vals=( ${init_vals[@]} $init_val )
+
+  echo " $init_param = $init_val"
+
+done
+
+echo
+cat init.rc | grep minfree | sed 's/   //'
+
+cd ../..
+scripts/build_boot_img

@@ -1,0 +1,73 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+if [ ! -e tools/deodex_files/api_level.txt ]
+then
+  echo "错误： 找不到 tools/deodex_files/api_level.txt"
+  scripts/press_enter
+  exit 0
+fi
+
+api_level=`scripts/get_api_level`
+
+echo
+echo "厨房的当前 API 级别设置为： $api_level"
+echo "确保已经为你的 ROM 设置正确 API 级别!"
+echo
+echo "每个 API 级别对应于至少一个 Android OS 版本."
+echo
+echo "例如："
+echo "      Android 4.4-4.4.?   = API Level 19"
+echo "      Android 4.3-4.3.1   = API Level 18"
+echo "      Android 4.2-4.2.2   = API Level 17"
+echo "      Android 4.1-4.1.1   = API Level 16"
+echo "      Android 4.0.3-4.0.4 = API Level 15"
+echo "      Android 4.0-4.0.2   = API Level 14"
+echo "      Android 3.2         = API Level 13"
+echo "      Android 3.1.x       = API Level 12"
+echo "      Android 3.0.x       = API Level 11"
+echo "      Android 2.3.3+      = API Level 10"
+echo
+echo "注意: 上面不包含完整的列表."
+echo
+echo "请阅读完整的说明:"
+echo "http://developer.android.com/guide/appendix/api-levels.html"
+echo
+
+echo -n "请输入新的级别级，或者输入'0'取消 (当前级别值: $api_level): "
+read set_level
+
+if [ "`echo $set_level | sed 's/[0-9]*//'`" != "" ] || [ "$set_level" == "" ]
+then
+  echo
+  echo "警告: 输入无效-无任何改变"
+
+elif [ "$set_level" == "0" ]
+then
+  echo
+  echo "OK, 没有改变"
+
+else
+  echo $set_level > tools/deodex_files/api_level.txt
+  current_level=`scripts/get_api_level`
+
+  echo
+  echo "在 api_level.txt 中, API 级别将被设置为: $current_level"
+
+  if [ "$current_level" != "$set_level" ]
+  then
+    echo
+    echo "警告： 所指定的级别值不符合规定"
+  fi
+fi
+
+scripts/press_enter

@@ -1,0 +1,58 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+cd WORKING_*
+
+if [ -d system/etc/init.d ]
+then
+
+  echo
+  echo "检查 update-script 脚本是否需要更新 /system/etc/init.d 内容 ..."
+
+  cd META-INF/com/google/android
+
+  if [ -e update-script ]
+  then
+
+    if [ `grep -c "set_perm_recursive .*SYSTEM:etc/init.d$" update-script` == 0 ]
+    then
+
+      echo "update-script 脚本已经被修改"
+
+      # Look for line with set_perm_recursive of SYSTEM:
+      grep_perm=`grep set_perm_recursive update-script | grep -m 1 "SYSTEM:[ ]*$"`
+
+      if [ "$grep_perm" == "" ]
+      then
+        sed -i -e 's/copy_dir PACKAGE:system SYSTEM:/copy_dir PACKAGE:system SYSTEM:\nset_perm_recursive 0 0 0777 0777 SYSTEM:etc\/init.d/g' update-script
+      else
+        sed -i -e 's/\(set_perm_recursive[ ]*[^\ ]*[ ]*[^\ ]*[ ]*[^\ ]*[ ]*[^\ ]*[ ]*SYSTEM:[ ]*$\)/\1\nset_perm_recursive 0 0 0777 0777 SYSTEM:etc\/init.d/g' update-script
+      fi
+
+      if [ `grep -c "set_perm_recursive .*SYSTEM:etc/init.d$" update-script` == 0 ]
+      then
+        echo "错误: 无法在 update-script 脚本中找到需要添加的代码"
+      fi
+
+    else
+      echo "在 update-script 脚本中已经有对 init.d 文件夹设置权限的内容"
+    fi
+
+  else
+    echo "错误: 未发现 update-script 刷机脚本!"
+  fi
+
+  cd ../../../..
+
+fi
+
+cd ..
+scripts/fix_update_script_blanks

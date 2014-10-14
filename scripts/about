@@ -1,0 +1,135 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+current_ver=$1
+
+echo
+echo "============================================================"
+echo " Android Kitchen $current_ver - by dsixda (xda-developers.com)"
+echo "============================================================"
+echo " Android Kitchen $current_ver - by hwh132 越狱 汉化"
+echo "============================================================"
+echo
+echo "关于厨房"
+echo
+echo "------------------------------------------------------------"
+echo
+echo "  获取帮助以及参与讨论 : http://bit.ly/aLKQaR"
+echo "  dsixda的Twitter      : http://www.twitter.com/dsixda"
+echo "  使用Paypal捐赠       : http://bit.ly/blHTKy"
+echo
+echo "------------------------------------------------------------"
+echo
+echo -n "联机检查更新(y/n)? (默认为: y): "
+read do_update
+
+if [ "$do_update" == "n" ]
+then
+  exit 0
+fi
+
+echo
+echo "搜索更新 ..."
+echo
+
+notes=`scripts/get_latest_notes`
+latest_ver=`echo $notes | sed -e 's/.*Version[ ]*\([0-9]*.[0-9]*\) (.*/\1/g' -e 's/[ ]*//g'`
+
+if [ "$latest_ver" == "" ]
+then
+  echo "错误: 无法找到更新"
+
+else
+
+  curr_major=`echo $current_ver | sed 's/\([0-9]*\).[0-9]*/\1/'`
+  curr_minor=`echo $current_ver | sed 's/[0-9]*.//'`
+
+  latest_major=`echo $latest_ver | sed 's/\([0-9]*\).[0-9]*/\1/'`
+  latest_minor=`echo $latest_ver | sed 's/[0-9]*.//'`
+
+  update=1
+
+  #
+  # 正在使用的版本和在线版本进行比较
+  #
+  if [ $curr_major -gt $latest_major ]
+  then
+    update=0
+  else
+
+    if [ $curr_major -eq $latest_major ]
+    then
+      if [ $curr_minor -ge $latest_minor ]
+      then
+        update=0
+      fi
+    fi
+  fi
+
+
+  if [ $update == 0 ]
+  then
+    echo "最新的联机版本是 $latest_ver, 无需更新"
+  else
+
+    echo "发现可更新版本 ($latest_ver)"
+    echo
+    echo "发现在线发行说明."
+
+    # xda-developers updates the formatting of the page, so this routine would need to
+    # updated every time.  Comment out for now.
+    #echo "$notes"
+
+    echo
+    echo -n "下载 (y/n)? (默认: y): "
+    read proceed_download
+    if [ "$proceed_download" == "n" ]
+    then
+      exit 0
+    fi
+
+    new_file=dsixda_Android_Kitchen_$latest_ver.zip
+
+    echo
+    echo "下载 $new_file ..."
+    echo
+
+    url=https://github.com/dsixda/Android-Kitchen/archive/$latest_ver.zip
+
+    wget --no-check-certificate $url -O $new_file
+    echo
+
+    #不支持在 Mac 上吗?
+    #zip_size=`stat -c %s $new_file`
+
+    ls_size=`ls -l $new_file`
+    grep_empty=`echo $ls_size | grep -c " 0 "`
+
+    if [ -e $new_file ] && [ $grep_empty == 0 ]
+    then
+      echo "$new_file 下载成功"
+      echo "你必须将下载的新版本厨房解压才可以使用"
+    else
+      echo "错误: $new_file 未下载"
+      rm -f $new_file
+    fi
+  fi
+fi
+
+if [ -e $check_filename ]
+then
+  rm -f $check_filename
+fi
+
+echo
+echo "按回车键继续"
+read enterKey

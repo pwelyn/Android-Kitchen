@@ -1,0 +1,70 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#!/bin/bash
+
+version=$1
+
+while :
+do
+
+  clear
+
+  echo
+  echo "============================================================"
+  echo " Android Kitchen $version - by dsixda (xda-developers.com)"
+  echo "============================================================"
+  echo " Android Kitchen $version - by hwh132 越狱 汉化"
+  echo "============================================================"
+  echo
+  echo "> 高级选项"
+  echo
+  echo " 10 - 对 ROM 进行去调试信息操作（去除apk或jar调试信息）"
+  echo " 11 - 对 ROM 进行 Deodex 操作（合并ODEX文件到APK）"
+  echo " 12 - boot镜像工具箱 (unpack/re-pack/etc.)"
+  echo " 13 - 添加 /data/app 功能"
+  echo " 14 - 添加 /etc/init.d 脚本支持（busybox run-parts）"
+  echo " 15 - 解压 data.img "
+  echo " 16 - 签名 APK 或 ZIP 文件"
+  echo " 17 - 转换 update-script 或 updater-script 刷机脚本"
+  echo " 18 - 插件脚本"
+  echo
+  echo " 99 - 从 Working 文件夹生成 ROM 刷机包"
+  echo "  0 - 返回到主菜单"
+  echo
+  echo -n "输入选项: "
+  read opt
+
+  if [ "$opt" != "0" ]
+  then
+    scripts/check_multiple_working
+  fi
+
+  if [ "$?" != "1" ]
+  then
+    case $opt in
+      10) scripts/do_debug; continue;;
+      11) scripts/do_deodex; continue;;
+      12) scripts/boot_img_tools; continue;;
+      13) scripts/add_data_app show_help;;
+      14) scripts/add_busybox_run_parts show_help;;
+      15) scripts/unpack_data_img;;
+      16) scripts/sign_files; continue;;
+      17) scripts/update_script_convert_menu; continue;;
+      18) scripts/run_plugins; continue;;
+      99) scripts/build_rom;;
+      0) exit 1;;
+      *) echo "错误选项"; continue;;
+    esac
+  fi
+
+  scripts/press_enter
+
+done

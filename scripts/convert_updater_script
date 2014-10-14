@@ -1,0 +1,663 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+if [ "$1" == "" ]
+then
+  clear
+fi
+
+echo
+
+base_dir=`pwd`
+
+if [ -d WORKING_* ]
+then
+
+  cd WORKING_*
+  working_dir=`pwd`
+
+  cd META-INF/com/google/android
+
+else
+  echo
+  echo "未发现 Working 文件夹，你需要创建一个!"
+  exit 0
+fi
+
+
+if [ "$1" == "" ]
+then
+
+  echo "转换工具: updater-script (Edify) 转换为 update-script (Amend)"
+  echo "--------------------------------------------------------------------------"
+  echo
+  echo "此脚本会将你的 updater-script 脚本转换为 update-script 脚本"
+  echo
+  echo "确保的的工作文件夹中 META-INF/com/google/android "
+  echo "文件夹下有 updater-script 脚本."
+  echo
+  echo -n "继续并转换(y/n)? (默认: y): "
+
+  read proceed_now
+  echo
+
+  if [ "$proceed_now" == "n" ]
+  then
+    cd ../../../../..
+    exit 0
+  fi
+
+  echo "--------------------------------------------------------------------"
+  echo
+
+fi
+
+if [ -e updater-script ]
+then
+
+  if [ -e update-script ]
+  then
+    echo "错误： 虽然你有一个 updater-script 脚本, 但你还有一个 update-script 脚本"
+    echo "        在文件夹中. 删除其中之一."
+    echo
+
+    echo -n "删除 update-script 脚本然后继续转换(y/n)? (默认: y): "
+    read remove_it
+    echo
+    if [ "$remove_it" != "n" ]
+    then
+      rm -vf update-script
+      echo
+      echo
+      echo "--------------------------------------------------------------------"
+      echo
+
+    else
+      cd ../../../../..
+      exit 0
+    fi
+  fi
+
+else
+  echo "错误: 未发现 updater-script 脚本!"
+  cd ../../../../..
+  exit 0
+fi
+
+
+
+
+echo "转换为 update-script, 请稍等 ..."
+echo
+
+
+# If there is no mount point definitions for this device in the
+# tools/edify_defs folder, create a basic one based on the 
+# updater-script contents
+cd ../../../../..
+scripts/create_edify_def
+
+cd WORKING_*
+cd META-INF/com/google/android
+
+
+echo "- Initial formatting ..."
+
+# The 'strings' command is used in case the ui_print statement has special symbols in it
+more updater-script \
+  | sed -e ':a;N;$!ba;s/([ ]*\n/(/g' \
+  | sed -e ':a;N;$!ba;s/\n[ ]*\&\&/ \&\&/g' \
+  | sed -e ':a;N;$!ba;s/\n[ ]*||/ ||/g' \
+  | sed -e ':a;N;$!ba;s/\n);/);/g' \
+  | strings \
+  | sed -e ':a;N;$!ba;s/ui_print("[^"]*");//g' \
+  | sed -e ':a;N;$!ba;s/||[ ]*\n//g' \
+  | sed -e ':a;N;$!ba;s/,[ ]*\n//g' \
+  | sed -e 's/","/", "/g' \
+        -e 's/\([0-9]*\),[ ]*\([0-9]*\)/\1, \2/g' \
+        -e 's/^\([a-zA-Z_]*\)[ ]*(/\1(/g' \
+> temp.log
+
+
+#
+# 制表符替换空格!
+#
+tr '\011' ' ' <temp.log >temp.log.new
+mv -f temp.log.new temp.log
+
+
+#
+# 删除注释
+#
+sed -i -e '/^#/d' temp.log
+
+
+#
+# 一些updater-scripts脚本使用的常规mount/unmount命令
+#
+sed -i -e '/^run_program("\/sbin\/mount"/d' temp.log
+sed -i -e '/^run_program("\/sbin\/umount"/d' temp.log
+sed -i -e '/^run_program("\/sbin\/busybox", "mount"/d' temp.log
+sed -i -e '/^run_program("\/sbin\/busybox", "umount"/d' temp.log
+
+
+#
+# For Samsung Galaxy S/S2 and equivalent
+#
+if [ -e ../../../../zImage ] && [ `grep -c boot.img temp.log` == 0 ]
+then
+  sed -i \
+    -e '/zImage"/d' \
+    -e '/flash_image"/d' \
+    -e '/redbend_ua"/d' \
+    temp.log
+
+  echo "flash_zimage" >> temp.log
+fi
+
+if [ -e ../../../../modem.bin ]
+then
+  sed -i \
+    -e '/modem.bin"/d' \
+    -e '/flash_image"/d' \
+    -e '/redbend_ua"/d' \
+    temp.log
+
+  echo "flash_modem" >> temp.log
+fi
+
+
+
+#
+# assert
+#
+echo "- assert ..."
+line_num=`sed -n -e '/assert(/{=;q}' temp.log`
+
+while [ "$line_num" != "" ]
+do
+  sed -i \
+    -e ''$line_num' s/assert(\(.*\)").*);/\1");/g' \
+    -e ''$line_num' s/^.*getprop.*;//g' \
+    temp.log
+
+  if [ -e ../../../../radio.img ]
+  then
+    sed -i -e ''$line_mum' s/^.*install_radio.*;/write_radio_image PACKAGE:radio.img/g' temp.log
+  else
+    sed -i -e ''$line_num' s/^.*install_radio.*;//g' temp.log
+  fi
+
+  if [ -e ../../../../hboot.img ]
+  then
+    sed -i -e ''$line_mum' s/^.*install_hboot.*;/write_hboot_image PACKAGE:hboot.img/g' temp.log
+  else
+    sed -i -e ''$line_num' s/^.*install_hboot.*;//g' temp.log
+  fi
+
+  sed -i \
+    -e ''$line_num' s/)[ ]*/);\n/g' \
+    -e 's/^;$//g' \
+    temp.log
+
+  line_num=`sed -n -e '/assert(/{=;q}' temp.log`
+done
+
+
+#
+# 修复有时 assert 语句所留下的烂摊子
+#
+sed -i \
+  -e 's/^==[ ]*\(.*$\)/\1/g' \
+  -e 's/^||[ ]*\(.*$\)/\1/g' \
+  -e 's/^&&[ ]*\(.*$\)/\1/g' \
+  -e 's/^[^a-z]*\([a-z]*\)/\1/g' \
+  -e '/^ui_print/d' \
+  temp.log
+
+
+
+#
+# boot.img / radio.img / bootloader.img
+#
+echo "- write_raw_image ..."
+
+img_list=( boot radio bootloader )
+temp_list=( tmp cache )
+
+
+for (( t = 0 ; t < ${#temp_list[@]} ; t++ ))
+do
+
+  temp_name=${temp_list[${t}]}
+
+  for (( i = 0 ; i < ${#img_list[@]} ; i++ ))
+  do
+
+    #
+    # 如果它们匹配所需的字符串，替换 3 连续行
+    #
+
+    img_name=${img_list[${i}]}
+
+    if [ -e ../../../../$img_name.img ]
+    then
+      sed -i -e ':a;N;$!ba;s/package_extract_file("'"$img_name"'.img", "\/'"$temp_name"'\/'"$img_name"'.img");\n[ ]*write_raw_image("\/'"$temp_name"'\/'"$img_name"'.img", "[^"]*");\n[ ]*delete("\/'"$temp_name"'\/'"$img_name"'.img");/write_raw_image PACKAGE:'"$img_name"'.img/g' temp.log
+    else
+      sed -i -e ':a;N;$!ba;s/package_extract_file("'"$img_name"'.img", "\/'"$temp_name"'\/'"$img_name"'.img");\n[ ]*write_raw_image("\/'"$temp_name"'\/'"$img_name"'.img", "[^"]*");\n[ ]*delete("\/'"$temp_name"'\/'"$img_name"'.img");//g' temp.log
+    fi
+
+  done
+done
+
+sed -i -e 's/write_raw_image("boot.img", "boot");/write_raw_image PACKAGE:boot.img BOOT:/g' temp.log
+sed -i -e 's/write_raw_image PACKAGE:boot.img$/write_raw_image PACKAGE:boot.img BOOT:/g' temp.log
+
+
+#
+# Dell Streak
+#
+if [ -e ../../../../boot.img ]
+then
+  sed -i -e ':a;N;$!ba;s/package_extract_file("boot.img", "\/tmp\/boot.img");\n[ ]*write_boot_raw_image("\/tmp\/boot.img", "boot");\n[ ]*delete("\/tmp\/boot.img");/write_raw_image PACKAGE:boot.img BOOT:/g' temp.log
+else
+  sed -i -e ':a;N;$!ba;s/package_extract_file("boot.img", "\/tmp\/boot.img");\n[ ]*write_boot_raw_image("\/tmp\/boot.img", "boot");\n[ ]*delete("\/tmp\/boot.img");//g' temp.log
+fi
+if [ -e ../../../../blob ]
+then
+  sed -i -e ':a;N;$!ba;s/package_extract_file("blob", "\/tmp\/blob");\n[ ]*write_blob_raw_image("\/tmp\/blob", "staging");\n[ ]*delete("\/tmp\/blob");/write_blob_raw_image PACKAGE:blob/g' temp.log
+else
+  sed -i -e ':a;N;$!ba;s/package_extract_file("blob", "\/tmp\/blob");\n[ ]*write_blob_raw_image("\/tmp\/blob", "staging");\n[ ]*delete("\/tmp\/blob");//g' temp.log
+fi
+
+
+
+#
+# run_program
+#
+echo "- run_program ..."
+line_num=`sed -n -e '/run_program(/{=;q}' temp.log`
+
+while [ "$line_num" != "" ]
+do
+
+  # run_program 跨多行
+  has_end=`sed -n -e ''$line_num'p' temp.log | grep -c "\");[ ]*$"`
+
+  # Combine the next line
+  while [ $has_end == 0 ]
+  do
+    # N = read next line
+    sed -i -e ''$line_num'N;s/\n/[cr]/g' temp.log
+
+    has_end=`sed -n -e ''$line_num'p' temp.log | grep -c "\");[ ]*$"`
+  done
+
+  sed -i \
+    -e ''$line_num' s/ /\[sp\]/g' \
+    -e ''$line_num' s/",\[sp\]"/ /g' \
+    -e ''$line_num' s/,/\[co\]/g' \
+    -e ''$line_num' s/run_program("/run_program /g' \
+    -e ''$line_num' s/run_program \/\([a-zA-Z]*\)/run_program PACKAGE:\1/g' \
+    -e ''$line_num' s/run_program PACKAGE:\//run_program \//g' \
+    -e ''$line_num' s/);//g' \
+    -e ''$line_num' s/;/\[sc\]/g' \
+    temp.log
+
+  line_num=`sed -n -e '/run_program(/{=;q}' temp.log`
+done
+
+
+
+#
+# delete
+#
+echo "- 删除 ..."
+line_num=`sed -n -e '/delete(/{=;q}' temp.log`
+
+while [ "$line_num" != "" ]
+do
+  sed -i \
+    -e ''$line_num' s/delete(/delete /g' \
+    -e ''$line_num' s/"//g' \
+    -e ''$line_num' s/, /\ndelete /g' \
+    -e ''$line_num' s/)//g' \
+    -e ''$line_num' s/;//g' \
+    temp.log
+
+  line_num=`sed -n -e '/delete(/{=;q}' temp.log`
+done
+
+
+#
+# 删除 apply_patch
+#
+sed -i -e 's/apply_patch.*[;]//g' temp.log
+
+
+
+
+#
+# symlink
+#
+echo "- symlink ..."
+
+# 如果目标文件只包含符号链接命令，然后使用此
+sed -i -e 's/symlink("\([^\"]*\)", "\([^\"]*\)");/symlink \1 \2/g' temp.log
+
+line_num=`sed -n -e '/symlink(/{=;q}' temp.log`
+
+while [ "$line_num" != "" ]
+do
+
+  cp -f temp.log temp.log.old
+
+  src=`sed -ne ''$line_num' s/symlink("\([^"]*\)".*/\1/pg' temp.log`
+
+  # $src反斜杠误解的sed语法的一部分，修复sed的问题
+  # 而不是字符串
+  src=`echo $src | sed -e 's/\//dsixda_slash/g'`
+
+  # sed1 : 此转换脚本的顶部附近的格式设置代码可能已删除一些逗号
+  # sed2 : 所有目标将会都移到自己的行
+  # sed3 : 替代反斜杠，如有
+  # sed4 : 修复了符号链接集的最后一行
+  sed -i \
+    -e ''$line_num' s/"[ ]*"/", "/g' \
+    -e ''$line_num' s/", [ ]*"/\nsymlink '"$src"' /g' \
+    -e ''$line_num' s/dsixda_slash/\//g' \
+    -e ''$line_num' s/");//g' \
+  temp.log
+
+  # 不再需要第一行所有目标都移动到其他行后
+  sed -i -e ''$line_num'd' temp.log
+
+  #
+  # Ensure we are not stuck in an endless loop doing nothing
+  #
+  if [ "`diff temp.log temp.log.old`" == "" ]
+  then
+    echo
+    echo "错误: 转换符号链接出现问题"
+    rm -f temp.log.old temp.log
+    exit 1
+  fi
+
+  line_num=`sed -n -e '/symlink(/{=;q}' temp.log`
+
+done
+
+rm -rf temp.log.old
+
+
+
+
+echo "- 最终的格式 ..."
+
+#
+# 修复 update-script 脚本
+#
+sed -i \
+  -e 's/;//g' \
+  -e 's/,//g' \
+  -e 's/(/ /g' \
+  -e 's/)//g' \
+  -e 's/^mount .*//g' \
+  -e 's/^unmount .*//g' \
+  -e 's/package_extract_dir \"\([^ ]*\)/copy_dir PACKAGE:\1/g' \
+  \
+  -e 's/\/system\//SYSTEM:/g' \
+  -e 's/ \/system/ SYSTEM:/g' \
+  -e 's/"\/system"/SYSTEM:/g' \
+  -e 's/\"system\"/SYSTEM:/g' \
+  -e 's/\"SYSTEM:\"/SYSTEM:/g' \
+  -e 's/\" SYSTEM/ SYSTEM/g' \
+  -e 's/\"SYSTEM:\([^\"]*\)\"/SYSTEM:\1/g' \
+  -e 's/symlink SYSTEM:/symlink \/system\//g' \
+  \
+  -e 's/\/preload\//PRELOAD:/g' \
+  -e 's/ \/preload/ PRELOAD:/g' \
+  -e 's/"\/preload"/PRELOAD:/g' \
+  -e 's/\"preload\"/PRELOAD:/g' \
+  -e 's/\"PRELOAD:\"/PRELOAD:/g' \
+  -e 's/\" PRELOAD/ PRELOAD/g' \
+  -e 's/\"PRELOAD:\([^\"]*\)\"/PRELOAD:\1/g' \
+  -e 's/symlink PRELOAD:/symlink \/preload\//g' \
+  \
+  -e 's/\/tmp\//TMP:/g' \
+  -e 's/ \/tmp/ TMP:/g' \
+  -e 's/"\/tmp"/TMP:/g' \
+  -e 's/\"tmp\"/TMP:/g' \
+  -e 's/\"TMP:\"/TMP:/g' \
+  -e 's/\" TMP/ TMP/g' \
+  -e 's/ \"TMP:/ TMP:/g' \
+  \
+  -e 's/\/data\//DATA:/g' \
+  -e 's/ \/data/ DATA:/g' \
+  -e 's/"\/data"/DATA:/g' \
+  -e 's/\"data\"/DATA:/g' \
+  -e 's/\"DATA:\"/DATA:/g' \
+  -e 's/\" DATA/ DATA/g' \
+  -e 's/"userdata"/DATA:/g' \
+  -e 's/\"DATA:\([^\"]*\)\"/DATA:\1/g' \
+  -e 's/symlink DATA:/symlink \/data\//g' \
+  \
+  -e 's/\/sdcard\//SDCARD:/g' \
+  -e 's/ \/sdcard/ SDCARD:/g' \
+  -e 's/"\/sdcard"/SDCARD:/g' \
+  -e 's/\"sdcard\"/SDCARD:/g' \
+  -e 's/\"SDCARD:\"/SDCARD:/g' \
+  -e 's/\" SDCARD/ SDCARD/g' \
+  \
+  -e 's/\/cache\//CACHE:/g' \
+  -e 's/ \/cache/ CACHE:/g' \
+  -e 's/"\/cache"/CACHE:/g' \
+  -e 's/\"cache\"/CACHE:/g' \
+  -e 's/\"CACHE:\"/CACHE:/g' \
+  -e 's/\" CACHE/ CACHE/g' \
+  \
+  -e 's/\/sdext\//SDEXT:/g' \
+  -e 's/ \/sdext/ SDEXT:/g' \
+  -e 's/"\/sdext"/SDEXT:/g' \
+  -e 's/\"sdext\"/SDEXT:/g' \
+  -e 's/\"SDEXT:\"/SDEXT:/g' \
+  -e 's/\" SDEXT/ SDEXT/g' \
+  \
+  -e 's/"\/boot\//BOOT:/g' \
+  -e 's/"\/boot/BOOT:/g' \
+  -e 's/ \/boot\// BOOT:/g' \
+  -e 's/"\/boot"/BOOT:/g' \
+  -e 's/\"boot\"/BOOT:/g' \
+  -e 's/\"BOOT:\"/BOOT:/g' \
+  -e 's/\" BOOT/ BOOT/g' \
+  \
+  -e 's/\"MTD //g' \
+  -e 's/set_perm\([^\"]*\)\"\([^\"]*\)\"/set_perm\1\2/g' \
+  -e 's/\"\([^\"]*\)\"/\1/g' \
+  -e 's/^[ \t]*//g' \
+  -e 's/\/$//g' \
+  -e 's/"$/\n/g' \
+temp.log
+
+
+
+#
+# 这里修补任何转换问题
+#
+
+sed -i \
+  -e 's/MTD //g' \
+  -e 's/ system\// SYSTEM:/g' \
+  -e 's/ preload\// PRELOAD:/g' \
+  -e 's/ tmp\// TMP:/g' \
+  -e 's/ data\// DATA:/g' \
+  -e 's/ sdcard\// SDCARD:/g' \
+  -e 's/ cache\// CACHE:/g' \
+  -e 's/ sdext\// SDEXT:/g' \
+  -e 's/ boot\// BOOT:/g' \
+  -e 's/\(symlink [^ ]*\)SYSTEM:/\1\/system\//g' \
+  -e 's/\(symlink [^ ]*\)PRELOAD:/\1\/preload\//g' \
+  -e 's/\(symlink [^ ]*\)DATA:/\1\/data\//g' \
+  -e 's/\(symlink [^ ]*\)CACHE:/\1\/cache\//g' \
+  -e 's/\(symlink [^ ]*\)TMP:/\1\/tmp\//g' \
+  -e 's/\(symlink [^ ]*\)SDCARD:/\1\/sdcard\//g' \
+  -e 's/\(symlink [^ ]*\)SDEXT:/\1\/sdext\//g' \
+  -e 's/\(symlink [^ ]*\)BOOT:/\1\/boot\//g' \
+  -e 's/\(set_perm.*\/.*\)SYSTEM:/\1\/system\//g' \
+  -e 's/\(set_perm.*\/.*\)PRELOAD:/\1\/preload\//g' \
+  -e 's/\(set_perm.*\/.*\)DATA:/\1\/data\//g' \
+  -e 's/\(set_perm.*\/.*\)CACHE:/\1\/cache\//g' \
+  -e 's/\(set_perm.*\/.*\)TMP:/\1\/tmp\//g' \
+  -e 's/\(set_perm.*\/.*\)SDCARD:/\1\/sdcard\//g' \
+  -e 's/\(set_perm.*\/.*\)SDEXT:/\1\/sdext\//g' \
+  -e 's/\(set_perm.*\/.*\)BOOT:/\1\/boot\//g' \
+  -e 's/\(package_extract_file\) SYSTEM:/\1 system\//g' \
+  -e 's/\(package_extract_file\) PRELOAD:/\1 preload\//g' \
+  -e 's/\(package_extract_file\) DATA:/\1 data\//g' \
+  -e 's/\(package_extract_file\) CACHE:/\1 cache\//g' \
+  -e 's/\(package_extract_file\) TMP:/\1 tmp\//g' \
+  -e 's/\(package_extract_file\) SDCARD:/\1 sdcard\//g' \
+  -e 's/\(package_extract_file\) SDEXT:/\1 sdext\//g' \
+  -e 's/\(package_extract_file\) BOOT:/\1 boot\//g' \
+  -e 's/^format[ ]*\([^ ]*\)[ ]*\(.*\)/format \1 \2/g' \
+temp.log
+
+
+#
+# 删除空行
+#
+sed -i -e '/^$/d' temp.log
+
+
+#
+# Replace the 3 consecutive lines created in updater-script when a script from the
+# *base directory* of ROM is used in run_program.
+#
+# e.g.
+#
+#   package_extract_file("backuptool.sh", "/tmp/backuptool.sh");
+#   set_perm(0, 0, 0777, "/tmp/backuptool.sh");
+#   run_program("/tmp/backuptool.sh", "backup");
+#
+# (Ensure there are no blank lines in file)
+#
+
+line_list=`grep -n package_extract_file temp.log`
+line_num_list=`echo "$line_list" | sed -e 's/\([0-9]*\).*/\1/g'`
+
+# Increase this if the lines are changed
+move_lines=0
+
+for line_num in $line_num_list
+do
+
+  line_num1=$(($line_num-$move_lines))
+
+  curr_line=`sed -n -e ''$line_num1'p' temp.log`
+  src=`echo "$curr_line" | sed -e 's/package_extract_file \(.*\) .*/\1/'`
+
+  test_src=`echo "$src" | grep -c "/"`
+  if [ $test_src == 1 ]
+  then
+    continue
+  else
+    sed -i -e ''$line_num1' s/\(package_extract_file \)\(.*\) /\1PACKAGE:\2 /g' temp.log
+  fi
+
+  partition=`echo "$curr_line" | sed -e 's/package_extract_file .* \([^:]*\):\(.*\)/\1/'`
+  filename=`echo "$curr_line" | sed -n -e ''$line_num1'p' temp.log | sed -e 's/package_extract_file .* \([^:]*\):\(.*\)/\2/'`
+
+  if [ "$partition" == "TMP" ] || [ "$partition" == "CACHE" ]
+  then
+
+    line_num2=$(($line_num1+1))
+    expect_line2="set_perm 0 0 0777 $partition:$filename"
+    actual_line2=`sed -n -e ''$line_num2'p' temp.log`
+
+    if [ "$actual_line2" == "$expect_line2" ]
+    then
+      line_num3=$(($line_num2+1))
+      small_partition=`echo $partition | sed 's/\([A-Z]*\)/\L\1/g'`
+      expect_line3="run_program PACKAGE:$small_partition/$filename"
+      actual_line3=`sed -n -e ''$line_num3'p' temp.log`
+
+      res=`echo $actual_line3 | grep -c "$expect_line3"`
+      if [ $res == 1 ]
+      then
+        sed -i -e ''"$line_num1"','"$line_num2"'d' temp.log
+        sed -i -e ''$line_num1' s/run_program PACKAGE:'"$small_partition"'\/\(.*\)/run_program PACKAGE:\1/g' temp.log
+
+        move_lines=$(($move_lines+2))
+      fi
+    fi
+  fi
+done
+
+
+
+#
+# Finished
+#
+
+mv -f temp.log update-script
+rm -f temp.log.old
+
+
+#
+# 特定设备的mount
+#
+cd ../../../../..
+scripts/adjust_mnt update-script
+cd WORKING_*
+cd META-INF/com/google/android
+
+
+
+echo
+
+if [ -e update-script ]
+then
+
+  mv -f updater-script updater-script.orig
+
+  echo "--------------------------------------------------------------------"
+  echo
+  echo "update-script 脚本已被创建在工作文件夹中 META-INF/com/google/android 下，"
+  echo "请检查它避免存在错误。"
+  echo ""
+  echo "原始 updater-script 脚本将被重命名为 updater-script.orig ，它将不会包括在"
+  echo "ROM 刷机包 ZIP 文件，但请不要删除它"
+  echo "因为厨房有可能还需要它."
+  echo
+
+  if [ -e update-binary ]
+  then
+    mv -f update-binary update-binary.orig
+    echo "update-binary 也已改名为 update-binary.orig."
+  fi
+
+  cd $base_dir
+  scripts/update_script_should_convert_back
+
+  if [ "$?" == "1" ]
+  then
+    echo
+    echo "注意: 因为无法完全转换 Edify 语法成 Amend 格式，在最终 ROM 的 update.zip "
+    echo "      文件中 update-script 脚本将会自动转换回 updater-script 脚本。"
+    echo "      然而，工作文件夹中将会仍旧包含 update-script 脚本."
+    echo
+  fi
+
+else
+  echo "错误: update-script 脚本未创建!"
+fi
+
+cd $base_dir

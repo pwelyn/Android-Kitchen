@@ -1,0 +1,29 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+android_os=`scripts/get_build_prop_val ro.build.version.release`
+
+if [[ `echo $android_os | grep -c "^1\."` -gt 0 || \
+     `echo $android_os | grep -c "^2\.1"` -gt 0 || \
+     `echo $android_os | grep -c "^2\.0"` -gt 0 ]]
+then
+  exit 1
+else
+
+  if [ "$android_os" == "UNKNOWN" ]
+  then
+    exit 2
+  fi
+
+  exit 0
+fi
+
+

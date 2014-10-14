@@ -1,0 +1,110 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+echo
+
+if [ -d WORKING_* ]
+then
+  cd WORKING_*
+
+  if [ ! -e boot.img ]
+  then
+    echo "未发现 boot.img!"
+    exit 0
+  else
+    boot_dir=`pwd`
+    cd ..
+    scripts/check_bootimg_header $boot_dir
+    res=$?
+
+    if [ "$res" == "1" ]
+    then
+      exit 0
+    else
+      cd WORKING_*
+    fi
+  fi
+
+else
+  echo "未发现 Working 文件夹!"
+  exit 0
+fi
+
+
+#
+# boot.img 标头格式 （boot_img_hdr） 上看到 bootimg.h 的详细信息
+#
+
+cd ..
+echo -n "请稍等 ."
+
+kernel_base_addr=`scripts/get_kernel_base_addr`
+
+echo -n "."
+ramdisk_load_addr=`scripts/get_ramdisk_addr`
+
+echo -n "."
+page_size=`scripts/get_boot_img_page_size`
+
+echo -n "."
+cmd_line=`scripts/get_cmdline`
+if [ "$cmd_line" == "" ]
+then
+  cmd_line="(None)"
+else
+  cmd_line="\"$cmd_line\""
+fi
+
+
+cd WORKING_*
+
+echo -n "."
+kernel_size=`od -A n -D -j 8 -N 4 boot.img | sed 's/ //g'`
+
+echo -n "."
+ramdisk_size=`od -A n -D -j 16 -N 4 boot.img | sed 's/ //g'`
+
+echo -n "."
+second_size=`od -A n -D -j 24 -N 4 boot.img | sed 's/ //g'`
+
+echo -n "."
+temp=`od -A n -H -j 28 -N 4 boot.img | sed 's/ //g'`
+second_load_addr=0x$temp
+
+echo -n "."
+asciiz_name=`od -A n --strings -j 48 -N 16 boot.img`
+if [ "$asciiz_name" == "" ]
+then
+  asciiz_name="(None)"
+else
+  asciiz_name="\"$asciiz_name\""
+fi
+
+cd ..
+
+clear
+
+echo
+echo "工作文件夹的 boot.img 信息"
+echo "-------------------------------------"
+echo
+echo " Kernel 内核大小             : $kernel_size Bytes"
+echo " Kernel 内核基本地址         : $kernel_base_addr"
+echo " Ramdisk 大小                : $ramdisk_size Bytes"
+echo " Ramdisk 载入地址            : $ramdisk_load_addr"
+echo " Second Stage 大小           : $second_size Bytes"
+echo " Second Stage 加载地址       : $second_load_addr"
+echo " 页面大小                    : $page_size Bytes"
+echo " ASCIIZ 产品名称             : $asciiz_name"
+echo
+echo " 命令代码行                  : $cmd_line"
+echo

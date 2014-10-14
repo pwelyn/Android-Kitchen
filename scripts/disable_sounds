@@ -1,0 +1,160 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+clear
+echo
+echo "-----------------------------------------------------------------"
+echo
+echo "此选项将禁用 Android 设备开机音乐"
+echo "此选项可能不支持您的设备."
+echo
+echo "-----------------------------------------------------------------"
+echo
+
+echo -n "继续禁用开机音乐(y/n)? (默认: y): "
+read do_disable
+
+if [ "$do_disable" == "n" ]
+then
+  exit 0
+fi
+
+echo
+
+if [ -d WORKING_* ]
+then
+  echo "发现 Working 文件夹"
+else
+  echo "未发现 Working 文件夹，你需要创建一个!"
+  exit 0
+fi
+
+if [ -d WORKING_* ]
+then
+  cd WORKING_*
+else
+  exit 0
+fi
+
+
+xml_dir_list=( system/media system/media/bootscreen )
+found_xml=0
+
+for (( i=0 ; i < ${#xml_dir_list[@]}; i++ ))
+do
+
+  xml_dir=${xml_dir_list[$i]}
+
+  if [ -e $xml_dir/boot_animation.xml ]
+  then
+
+    found_xml=1
+    orig_dir=`pwd`
+    cd $xml_dir/
+
+    echo
+    echo "一般是在 $xml_dir/boot_animation.xml 中:"
+    grep useAudio boot_animation.xml
+    echo
+
+    if [ "`grep useAudio='"1"' boot_animation.xml`" == "" ]
+    then
+    echo "开机音乐已经禁用，不需要修改"
+    else
+    echo "修改 boot_animation.xml ..."
+      perl -pi -e 's/useAudio="1"/useAudio="0"/g' boot_animation.xml
+
+      echo
+      echo "开始更改:"
+      grep useAudio boot_animation.xml
+    fi
+
+    if [ -e boot_animation.xml.bak ]
+    then
+      echo
+    echo "删除 boot_animation.xml.bak"
+      rm boot_animation.xml.bak
+    fi
+
+    cd $orig_dir
+  fi
+done
+
+
+
+if [ $found_xml == 0 ]
+then
+
+  success=0
+
+  echo
+  echo "在 ROM 中未发现 boot_animation.xml"
+
+  file_list="\
+              data/local/android_media.mp3 \
+              data/local/android_audio.mp3 \
+              data/local/boot.mp3 \
+              data/local/SPC_animation_final.mp3 \
+              system/customize/resource/android_audio.mp3 \
+              system/customize/resource/android_media.mp3 \
+              system/customize/resource/boot.mp3 \
+              system/customize/resource/SPC_animation_final.mp3 \
+              system/etc/PowerOn.ogg \
+              system/etc/PowerOn.wav \
+              system/media/bootaudio.mp3 \
+              system/media/audio/ui/PowerOn.ogg \
+              system/media/audio/ui/PowerOff.ogg \
+              system/media/audio/ui/PowerOff.wav \
+              system/media/android_audio.mp3 \
+              system/media/android_media.mp3 \
+              system/media/droidhd.ogg \
+              system/media/SPC_animation_final.mp3 \
+              system/media/audio/poweron/poweron.mp3 \
+              system/sounds/lgeSounds/PowerOn.mp3 \
+             "
+
+  for snd in $file_list
+  do
+
+    echo
+
+    if [ -e $snd ]
+    then
+      echo "--> 重命名 /$snd"
+      mv $snd $snd.bak
+      success=1
+    elif [ -e $snd.bak ]
+    then
+      echo "--> 发现 $snd.bak (开机声音是否已被禁用？)"
+      success=-1
+    else
+      echo "在 ROM 中未发现 /$snd"
+    fi
+
+  done
+
+  echo
+  echo
+
+  if [ "$success" == "1" ]
+  then
+    echo "--> 开机音乐成功禁用!"
+  elif [ "$success" == "-1" ]
+  then
+    echo "--> 没有任何更改"
+  else
+    echo "--> 不能完成禁用开机音乐!"
+  fi
+
+  cd ..
+fi
+
+echo

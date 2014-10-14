@@ -1,0 +1,97 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本从任何文件夹中提取 boot.img 的内容
+#
+
+clear
+
+date_str=`date '+%m%d%y_%H%M%S'`
+boot_dir=bootimg_$date_str
+
+echo
+echo "创建文件夹 `pwd`/$boot_dir ..."
+mkdir $boot_dir
+
+echo
+echo "---> 请把 boot.img/recovery.img 放到上面创建的文件夹 <--"
+
+scripts/press_enter
+
+cd $boot_dir
+
+if [ -e boot.img ] || [ -e recovery.img ]
+then
+
+  if [ -e recovery.img ]
+  then
+    echo "重命名 recovery.img 为 boot.img (为了方便脚本)"
+    mv -f recovery.img boot.img
+  fi
+
+  cd ..
+  scripts/check_bootimg_header $boot_dir
+  scripts/check_kernel_offset $boot_dir
+  res=$?
+
+  if [ "$res" == "0" ]
+  then
+    kernel_file=extract-kernel.pl
+    ramdisk_file=extract-ramdisk.pl
+  else
+    rm -rf $boot_dir
+    exit 0
+  fi
+
+  cd $boot_dir
+  cp ../tools/extract_boot_files/$kernel_file extract-kernel.pl
+  cp ../tools/extract_boot_files/$ramdisk_file extract-ramdisk.pl
+
+  echo
+  echo "提取 kernel ..."
+  ./extract-kernel.pl boot.img 2>/dev/null
+
+  if [ ! -e zImage ]
+  then
+    echo "错误: 未发现 zImage !"
+  else
+    test_z=`od -A n -j 1 -N 4 zImage | sed 's/ //g'`
+    if [ "$test_z" == "" ]
+    then
+      echo "错误: zImage 是空的!"
+    fi
+  fi
+
+  echo "提取 ramdisk ..."
+  ./extract-ramdisk.pl boot.img 2>/dev/null
+
+  if [ ! -d boot.img-ramdisk ]
+  then
+    echo "错误: 未发现 ramdisk 文件夹!"
+  fi
+
+  rm boot.img
+  rm extract-*.pl
+  cd ..
+  echo
+  echo "$boot_dir 的内容:"
+  echo
+  echo "`ls -l $boot_dir`"
+
+
+else
+  echo "错误: 未发现 boot.img 或 recovery.img !"
+  echo
+  cd ..
+  echo "删除 $boot_dir 文件夹"
+  rm -rf $boot_dir
+  exit 0
+fi

@@ -1,0 +1,215 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = "kernel_only" - 解压后不要修改任何文件
+#    = "name_given" - 如果正在使用，然后 $2 是强制性
+# $2 = ROM 名称在 original_update 中（如果指定 $1 = "name_given"）
+#
+
+
+if [ "$1" == "name_given" ]
+then
+
+  file_chosen=$2
+
+  if [ "$file_chosen" == "" ]
+  then
+    echo "错误: 没有指定 ROM 名称!"
+    cd ..
+    exit 0
+  fi
+
+  if [ ! -e original_update/$file_chosen ]
+  then
+    echo "错误: 未发现 original_update/$file_chosen!"
+    exit 0
+  fi
+
+else
+
+  while [ 1==1 ]
+  do
+
+    echo
+    echo "请稍等 ..."
+    echo
+
+    #
+    # 此脚本将搜索 original_update 下面可用的 ROM 文件
+    #
+    grep_cmd=`scripts/grep_roms`
+
+    if [ "$grep_cmd" == "" ]
+    then
+    echo "错误: 在 original_update 文件夹下未能发现 ROM 包文件!"
+      exit 0
+    fi
+
+    count=0
+    rm -f temp.list
+
+  echo >> temp.list
+  echo "可用的 ROM 包列表:" >> temp.list
+  echo >> temp.list
+
+    for filename in $grep_cmd
+    do
+      count=$(($count+1))
+
+      filename=`echo $filename | sed 's/temp_space/ /g'`
+
+      # Store file names in an array
+      file_array[$count]=$filename
+
+      if [ "$filename" == "system.img" ]
+      then
+        filename="system.img and boot.img"
+
+      elif [ "$filename" == "factoryfs.rfs" ]
+      then
+        filename="factoryfs.rfs, cache.rfs and zImage"
+
+      elif [ "$filename" == "system.rfs" ]
+      then
+        filename="system.rfs, csc.rfs and boot.img"
+
+      elif [ "$filename" == "system.img.ext4" ]
+      then
+        filename="system.img.ext4, tomb.img.ext4, cache.img.ext4 and boot.img"
+
+      elif [ "$filename" == "system.ext4.tar" ]
+      then
+        filename="system.ext4.tar and boot.img"
+
+      elif [ "$filename" == "factoryfs.img" ]
+      then
+        filename="factoryfs.img, hidden.img, cache.img and zImage"
+
+      elif [ "$filename" == "PDA.tar.md5" ]
+      then
+        filename="PDA.tar.md5, CSC.tar.md5 and PHONE.tar.md5"
+
+      elif [ "$filename" == "PDA.tar" ]
+      then
+        filename="PDA.tar, CSC.tar and PHONE.tar"
+      fi
+
+      echo "  ($count) $filename" >> temp.list
+    done
+
+    more temp.list
+    rm -f temp.list
+
+    echo
+    echo -n "输入选择的数字序号 (默认=1, 取消=0, 重新刷新=r): "
+
+    read enterNumber
+    echo
+
+    if [ "$enterNumber" == "0" ]
+    then
+      exit 0
+    fi
+
+    if [ "$enterNumber" == "" ]
+    then
+      enterNumber=1
+    fi
+
+    if [ "$enterNumber" == "r" ]
+    then
+      continue
+    fi
+
+    if [ "`echo $enterNumber | sed 's/[0-9]*//'`" == "" ] || [ "enterNumber"=="1" ]
+    then
+      file_chosen=${file_array[$enterNumber]}
+
+      if [ "$file_chosen" == "" ]
+      then
+        echo "错误: 无效的选择"
+        continue
+      else
+        break
+      fi
+    else
+      echo "错误: 无效的选择"
+      continue
+    fi
+
+  done
+
+fi
+
+
+if [ ! -d "original_update/$file_chosen" ]
+then
+
+  if [ "$file_chosen" == "system.img" ]
+  then
+    scripts/img_files_to_working_folder create_working $1
+    exit $?
+
+  elif [ "$file_chosen" == "factoryfs.rfs" ] || [ "$file_chosen" == "system.rfs" ]
+  then
+    scripts/rfs_files_to_working_folder create_working $1
+    exit $?
+
+  elif [ "$file_chosen" == "PDA.tar" ]
+  then
+    scripts/sgs_tar_files_to_working_folder create_working $1
+    exit $?
+
+  elif [ "$file_chosen" == "PDA.tar.md5" ]
+  then
+    scripts/sgs_tarmd5_files_to_working_folder create_working $1
+    exit $?
+
+  elif [ "$file_chosen" == "factoryfs.img" ]
+  then
+    scripts/simg_files_to_working_folder create_working $1
+    exit $?
+
+  elif [ "$file_chosen" == "system.img.ext4" ]
+  then
+    scripts/simg_ext4_files_to_working_folder create_working $1
+    exit $?
+
+  elif [ "$file_chosen" == "system.ext4.tar" ]
+  then
+    scripts/sext4_tar_files_to_working_folder create_working $1
+    exit $?
+
+  elif [ "`echo $file_chosen | grep -i \\.zip$`" != "" ]
+  then
+    scripts/zip_file_to_working_folder "$file_chosen" $1
+    exit $?
+
+  elif [ "`echo $file_chosen | grep -i \\.tar$`" != "" ]
+  then
+    scripts/tar_file_to_working_folder "$file_chosen" $1
+    exit $?
+
+  elif [ "`echo $file_chosen | grep -i \\.app$`" != "" ]
+  then
+    scripts/app_file_to_working_folder "$file_chosen" $1
+    exit $?
+  fi
+
+else
+  if [ "`echo $file_chosen | grep -m 1 \"^WORKING_\"`" != "" ]
+  then
+    scripts/wkg_to_working_folder "$file_chosen" $1
+    exit $?
+  fi
+fi

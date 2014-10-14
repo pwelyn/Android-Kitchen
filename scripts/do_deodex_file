@@ -1,0 +1,134 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+# 强制性
+api_level=$1
+
+# 强制性
+odex_file=$2
+
+# 强制性
+bootclass_dir=$3
+
+if [ "$odex_file" == "" ]
+then
+  echo "错误: 未指定 .odex 文件"
+
+elif [ -e $odex_file ]
+then
+  echo "反编译 $odex_file ..."
+else
+  echo "错误: 未发现 $odex_file 文件"
+fi
+
+bin_list="baksmali.jar smali.jar"
+
+for bin_file in $bin_list
+do
+  if [ ! -e $bin_file ]
+  then
+    echo "错误: 未发现 $bin_file!"
+    exit 0
+  fi
+done
+
+
+
+#
+# 调用 baksmali
+#
+
+java_cmd="java -Xmx512m -jar baksmali.jar -a $api_level -d $bootclass_dir -x $odex_file"
+echo $java_cmd
+$java_cmd
+is_error=$?
+
+
+#
+# If there were no errors, then assemble it with smali
+#
+
+if [ "$is_error" == "0" ] && [ -d out ]
+then
+
+  echo "反编译成 classes.dex ..."
+  java_cmd="java -Xmx512m -jar smali.jar -a $api_level -o classes.dex out"
+
+  echo $java_cmd
+  $java_cmd
+
+  rm -rf out
+
+  #
+  # 确保制作 classes.dex
+  #
+  if [ -e classes.dex ]
+  then
+
+    #
+    # 确保发现的.odex 文件.apk 或.jar
+    #
+
+    no_ext=`echo $odex_file | sed 's/.odex//'`
+    main_file=$no_ext.apk
+
+    error_found=no
+
+    if [ -e $main_file ]
+    then
+      echo "发现 $main_file"
+      ext=apk
+
+    else
+      main_file=$no_ext.jar
+
+      if [ -e $main_file ]
+      then
+        echo "发现 $main_file"
+        ext=jar
+      else
+        echo "错误: 无法找到 $no_ext.jar 或 $no_ext.apk"
+        error_found=yes
+      fi
+    fi
+
+
+    if [ $error_found == yes ]
+    then
+
+      echo "删除 classes.dex ..."
+      rm -f classes.dex
+
+      # 保持odex文件，以便它保持不变
+
+    else
+
+      echo "删除 $odex_file ..."
+      rm -f $odex_file
+
+      echo "将 classes.dex 打包进 $main_file ..."
+      zip -r -q $main_file classes.dex
+      rm -f classes.dex
+      if [ -e $main_file ]
+      then
+        echo "$main_file deodexed 操作成功"
+      fi
+      exit 0
+    fi
+
+  else
+    echo "警告: 无法生成 classes.dex 文件!"
+    exit 1
+  fi
+else
+  #echo "警告: 无法对 $odex_file 文件进行 Deodex 操作"
+  rm -rf out
+  exit 1
+fi

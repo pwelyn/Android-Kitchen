@@ -1,0 +1,32 @@
+欢迎使用 dsixda 开发的 Android 厨房。这是一个用于Android设备制造商如HTC，三星和许多其他的ROM定制的厨房。
+版权所有© dsixda
+中文汉化© by hwh132 越狱
+新功能添加© by 越狱
+
+
+从GitHub上，只需点击顶部的“标签”链接的。归档文件以前的版本也有标记。
+支持的设备，以及发行说明，安装说明和常见问题解答列表都在这里找到：
+http://forum.xda-developers.com/showthread.php?p=5626292
+
+【Android Kitchen v0.227】ROM定制厨房越狱修改汉化版|5月13日更新内容：
+1.修正一些汉化不全
+2.增加新功能，去除apk和jar调试信息功能
+去调试功能将会把ROM中的apk和jar中的classes.dex 文件进行处理，
+主要去除例如：.line和 .prologue代码，最后压缩进相应的 apk或jar 文件中
+此进程通常需要几分钟时间，系统自带apk不需要重新签名(非系统自带apk需要手动重新签名)
+
+注意：去调试功能只适合Deodex操作后的ROM进行操作 未合并odex的ROM请先使用厨房合并功能，合并所有的odex再进行去调试操作"
+
+厨房默认使用update-script脚本进行操作，最后生成刷机包会转换脚本为updater-script，因为什么转换自己百度一下
+如果updater-script刷机失败或其他原因，请更换刷机包内的update-binary，和修改updater-script脚本命令
+欢迎围观我的微博：http://weibo.com/206021119
+你可以在此版本进行二次修改，但请注明原作者：dsixda，汉化作者：hwh132 越狱，新版本作者：越狱
+
+【Android Kitchen v0.226】ROM定制厨房越狱修改汉化版|5月1日更新内容：
+1.解决无priv-app文件夹进入odex合并显示find: `system/priv-app': No such file or directory
+2.解决备份时无法备份priv-app文件夹问题
+3.加入判断（如果有app framework priv-app 三个文件夹提示备份三个文件夹，如果只有app framework 两个文件夹提示备份两个文件夹）
+4.更新SuperSU v1.94，Superuser v1.0.3.0
+5.根据SuperSU和Superuser脚本重新写权限脚本
+6.添加判断x86 armeabi,根据CPU来添加权限文件
+7.其他一些细节修改如有问题请反馈

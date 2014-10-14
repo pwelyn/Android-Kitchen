@@ -1,0 +1,87 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+echo
+echo "提取 SGS2 Initramfs - by mistadman"
+echo "-------------------------------------"
+echo
+echo "This script will attempt to extract the initramfs (i.e. the"
+echo "ramdisk) from the zImage of a Samsung Galaxy S/S2 or equivalent."
+echo
+echo "This may not work with all zImages, however. You may find best"
+echo "results with a stock zImage."
+echo
+echo "Unfortunately there is no zImage re-packing tool because it is"
+echo "dependent on your OS.  The best way to re-pack would be to"
+echo "download the kernel source code and toolchain for your device"
+echo "and build a zImage using those resources."
+echo
+
+echo -n "继续 (y/n)? (默认: y): "
+read do_extract
+echo
+
+if [ "$do_extract" == "n" ]
+then
+  exit 0
+fi
+
+
+clear
+
+date_str=`date '+%m%d%y_%H%M%S'`
+initramfs_dir=initramfs_$date_str
+
+echo
+echo "创建文件夹 `pwd`/$initramfs_dir ..."
+mkdir $initramfs_dir
+
+echo
+echo "---> 请放置 zImage 到上面创建的文件夹<--"
+
+scripts/press_enter
+
+cd $initramfs_dir
+
+if [ -e zImage ]
+then
+
+  cp ../tools/samsung_files/unpack-initramfs .
+
+  ./unpack-initramfs zImage
+
+  if [ ! -e kernel ]
+  then
+    echo "错误: 未发现 kernel!"
+  fi
+
+  if [ ! -d initramfs_root ]
+  then
+    echo "错误: 未发现 initramfs_root 文件夹!"
+  fi
+
+  rm zImage
+  rm unpack-initramfs
+  cd ..
+  echo
+  echo "$initramfs_dir的内容:"
+  echo
+  echo "`ls -l $initramfs_dir`"
+
+
+else
+  echo "错误: 未发现 zImage!"
+  echo
+  cd ..
+  echo "删除 $initramfs_dir folder"
+  rm -rf $initramfs_dir
+  exit 0
+fi
+

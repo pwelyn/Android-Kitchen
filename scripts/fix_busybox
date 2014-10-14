@@ -1,0 +1,108 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本通常用在 update(r)-script 脚本移除 busybox 符号链接后，它将会
+# 修复 busybox 的安装。
+#
+
+if [ ! -d WORKING_* ]
+then
+  echo "未发现 Working 文件夹!"
+  exit 1
+fi
+
+cd WORKING_*
+
+echo
+
+if [ -e system/bin/busybox ]
+then
+  echo "删除 /system/bin/busybox"
+  rm -f system/bin/busybox
+fi
+
+if [ -d system/xbin ]
+then
+  echo "发现 /system/xbin"
+else
+  echo "创建 /system/xbin"
+  mkdir system/xbin
+fi
+
+if [ ! -e system/xbin/busybox ]
+then
+  echo "添加 /system/xbin/busybox"
+  cp -f ../tools/busybox_files/busybox system/xbin/
+
+else
+
+  version=`more ../tools/busybox_files/version.txt | sed -e 's/BusyBox \(.*\)$/\1/g'`
+
+  echo
+  echo "Working 文件夹中已经存在 /system/xbin/busybox"
+  echo -n "用当前 BusyBox 替换 $version (y/n)? (默认: y): "
+  read replace_bin_bb
+  echo
+
+  if [ "$replace_bin_bb" == "n" ]
+  then
+    echo "取消"
+  else
+    echo "替换 /system/xbin/busybox"
+    cp -f ../tools/busybox_files/busybox system/xbin/
+  fi
+fi
+
+
+#
+# 删除 'installbusybox'，'add_busybox_to_update_script' 脚本
+# 将完全运行.
+#
+
+if [ -e installbusybox ]
+then
+  rm -f installbusybox
+fi
+
+
+#
+# 现在修复 update-script 脚本
+#
+if [ -e META-INF/com/google/android/update-script ]
+then
+
+  cd META-INF/com/google/android
+
+  search_xbin_busybox=`grep -c "symlink.*xbin/busybox" update-script`
+  search_symlinks=`grep -c "symlink busybox " update-script`
+  search_perm=`grep -c "set_perm.*xbin/busybox" update-script`
+
+  if [ $search_xbin_busybox -gt 0 ] || [ $search_symlinks -gt 0 ] || [ $search_perm -gt 0 ]
+  then
+    echo
+    echo "删除 update-script 脚本中现有的 /system/xbin/busybox 引用"
+    sed -i \
+      -e '/symlink.*xbin\/busybox/d' \
+      -e '/symlink busybox /d' \
+      -e '/set_perm.*xbin\/busybox/d' \
+      -e '/set_perm.*installbusybox/d' \
+      -e '/run_program.*installbusybox/d' \
+    update-script
+  fi
+
+  cd ../../../../..
+
+  scripts/add_busybox_to_update_script
+
+else
+  echo "错误: 未发现 update-script 脚本!"
+  cd ..
+fi

@@ -1,0 +1,67 @@
+############################################################################
+#
+# Copyright (c) 2014 - by 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+#
+############################################################################
+
+
+base_dir=`pwd`
+api_level=`scripts/get_api_level`
+
+cd WORKING_*
+
+num_jar_fr=`find system/framework | grep -c "\.jar$"`
+
+cd ..
+version=`scripts/get_smali_version`
+cd WORKING_*
+
+  count=0
+  found_error=0
+  path=system/framework
+
+  echo
+  echo
+  echo "跳转到 $path ..."
+  echo
+
+  cd $path
+
+  grep_cmd=`find . | grep "\.jar$" | sed 's/.\///g' | sort -f`
+
+  if [ "$grep_cmd" == "" ]
+  then
+    echo "在 $path 中未发现任何东西!"
+  else
+    cp -f ../../../tools/deodex_files/baksmali-$version.jar baksmali.jar
+    cp -f ../../../tools/deodex_files/smali-$version.jar smali.jar
+
+    for debug_file in $grep_cmd
+    do
+
+      count=$(($count+1))
+      echo
+      echo "一共$num_jar_fr文件在$path: 正在操作第$count $debug_file"
+
+      while [ -e $debug_file ]
+      do
+
+        ../../../scripts/do_debug_file $api_level $debug_file
+        if [ -e $odex_file ]
+        then
+            break
+          fi
+      done
+
+    done
+
+    rm -f baksmali.jar
+    rm -f smali.jar
+    echo
+    echo "完成 $path"
+  fi
+  cd ../..
+
+cd $base_dir

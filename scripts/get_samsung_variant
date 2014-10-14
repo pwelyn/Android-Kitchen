@@ -1,0 +1,32 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+my_model=`scripts/get_product_model`
+my_model2=`echo $my_model | sed -e 's/SAMSUNG-\(.*\)/\1/g'`
+
+cd tools/samsung_files/model_variants
+
+for device_dir in `ls`
+do
+  for variant_name in `ls $device_dir`
+  do
+    if [ -e "$device_dir/$variant_name/$my_model" ] || \
+      [ -e "$device_dir/$variant_name/$my_model2" ]
+    then
+      echo $variant_name
+      cd ../../..
+      exit 0
+    fi
+  done
+done
+
+cd ../../..
+echo ""
+

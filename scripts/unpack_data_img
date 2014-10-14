@@ -1,0 +1,152 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+clear
+
+curr_dir=`pwd`
+
+echo
+echo "此脚本将会解压任何文件夹的 'data.img' 文件（通常发现在 Nandroid 备份）。"
+echo
+echo "此内容将会解压到 $curr_dir 下的一个新文件夹。"
+echo
+echo "----------------------------------------------------------------------"
+echo
+echo -n "继续 (y/n)? (默认: y): "
+
+read proceed
+echo
+
+if [ "$proceed" == "n" ]
+then
+  echo "取消"
+  exit 0
+fi
+
+
+date_str=`date '+%m%d%y_%H%M%S'`
+img_dir="data`echo -n $f`_$date_str"
+img_path=$curr_dir/$img_dir
+
+echo
+echo "创建文件夹 $img_path ..."
+mkdir $img_dir
+
+echo
+echo "---> 将 data.img 放到上面创建的文件夹<--"
+
+scripts/press_enter
+
+if [ ! -e $img_dir/data.img ]
+then
+  echo "错误: 未发现 data.img 文件!"
+  echo
+  echo "删除 $img_dir 文件夹"
+  rm -rf $img_dir
+  exit 1
+fi
+
+
+#
+# 检查有 YAFFS/TAR/EXT*
+#
+
+scripts/check_if_img_yaffs $img_dir data.img
+
+is_yaffs=$?
+
+if [ "$is_yaffs" == "1" ]
+then
+
+  if [ `uname | grep CYGWIN` ]
+  then
+    unyaffs_file=unyaffs.exe
+  else
+    unyaffs_file=unyaffs
+  fi
+
+  scripts/compile_unyaffs $img_dir data.img
+  if [ "$?" == "1" ]
+  then
+    exit 0
+  fi
+
+  echo
+  echo "提取 data.img 的内容 ..."
+  cd $img_dir
+  result=`../tools/unyaffs_files/$unyaffs_file data.img 2>/dev/null`
+  cd ..
+
+else
+
+  cd $img_dir
+
+  # 检查 TAR 存档
+  test_tar=`od -A n --strings -j 0 -N 5 data.img`
+
+  if [ "$test_tar" == "data/" ]
+  then
+    echo "data.img 是一个 TAR 存档"
+    echo "提取文件 ..."
+
+    # 不显示时间戳警告
+    tar xf data.img 2>/dev/null
+
+    cd ..
+
+  else
+
+    echo
+    echo "检测到 NON-YAFFS/NON-TAR（非YAFFS）文件格式"
+    echo
+
+    # Get full path
+    imgr_dir=`pwd`
+
+    cd ..
+    scripts/extract_ext3_img $img_path data.img
+  fi
+fi
+
+
+cd $img_dir
+check_dump=`ls unyaffs*stackdump* 2>/dev/null`
+rm -f data.img 2>/dev/null
+
+if [ "$?" == "1" ]
+then
+  echo
+  echo "警告: data.img 正在使用中，请在应用程序关闭后手动删除文件。"
+  echo
+fi
+
+cd ..
+
+if [ "$check_dump" != "" ]
+then
+  echo
+  echo "错误: 在 $img_dir 下发现 stackdump 不兼容 unyaffs"
+  echo
+  exit 1
+fi
+
+if [ "`ls $img_dir`" == "" ]
+then
+  echo
+  echo "错误:  $img_path 是空的"
+  echo
+  exit 1
+fi
+
+echo
+echo "$img_path 文件列表:"
+echo
+ls -l $img_dir

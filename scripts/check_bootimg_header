@@ -1,0 +1,69 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有一个可选参数:
+#
+# $1 = 文件夹名称
+#
+
+base_dir=`pwd`
+
+if [ "$1" == "" ]
+then
+  cd WORKING_*
+else
+  cd $1
+fi
+
+#
+# 检查到奇怪的boot.img文件头
+#
+
+check_header=`od -A n -h -j 0 -N 8 boot.img | sed 's/ //g'`
+
+if [ "$check_header" != "4e415244494f2144" ]
+then
+
+  echo
+  echo "在 boot.img 的开始 未发现Android 'magic' header"
+  echo "检查是否在其他位置 ..."
+
+  # Mac OS X 中添加多余的数字之间的空格!
+  hex_offset=`od -x -A x boot.img | grep -m 1 "4e41 [ ]*5244 [ ]*494f [ ]*2144" | sed -e 's/ .*//'`
+
+  if [ "$hex_offset" != "" ]
+  then
+
+    #
+    # 删除前导字节在 Android 的标题之前
+    #
+
+    dec_offset=`printf "%d" 0x$hex_offset`
+    echo "Android header 在 $dec_offset 偏移处被发现"
+    echo "在 boot.img 能够正确读取之前正在删除额外的东西 ..."
+
+    dd if=boot.img of=newboot.img bs=1 skip=$dec_offset
+    rm -f boot.img
+    mv newboot.img boot.img
+    echo
+    cd $base_dir
+    exit 0
+
+  else
+    echo "警告: 在 boot.img 中未发现 android header(不受支持的格式)"
+    cd $base_dir
+    exit 1
+  fi
+fi
+
+
+cd $base_dir
+exit 0

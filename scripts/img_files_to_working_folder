@@ -1,0 +1,365 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = "no_create" 或 "创建" 或 "create_working
+#         - 必须指定 no_create 如果工作文件夹已经存在
+# $2 = "kernel_only" 或 "name_given" - 如果这指定则是强制性的 $1
+#
+
+if [ "$1" == "no_create" ]
+then
+  build_dir=`ls | grep -m 1 ^WORKING_`
+
+  mkdir $build_dir/system
+  mv $build_dir/system.img $build_dir/system
+
+  if [ -e $build_dir/lib.img ]
+  then
+    mkdir -p $build_dir/system/lib
+    mv $build_dir/lib.img $build_dir/system/lib
+  fi
+
+else
+
+  current_dir=`pwd`
+  dest_dir=$current_dir/original_update
+
+  #
+  # 在 original_update 中检查  System.img/boot.img/lib.img
+  #
+  if [ -e original_update/system.img ]
+  then
+    echo "发现 original_update/system.img"
+    if [ -e original_update/boot.img ]
+    then
+      echo "发现 original_update/boot.img"
+    fi
+
+    if [ -e original_update/lib.img ]
+    then
+      echo "发现 original_update/lib.img"
+    fi
+
+  else
+
+    if [ -e original_update/boot.img ]
+    then
+      echo "发现 original_update/boot.img"
+      echo "错误: 未发现 original_update/system.img"
+    else
+      echo
+      echo "错误: 在 original_update 文件夹下未发现 ROM 包文件!"
+    fi
+
+    exit 1
+  fi
+
+
+  #
+  # 工作文件夹名称
+  #
+  build_dir=`scripts/set_working_folder_name $2`
+
+  echo
+  echo "创建 Working 文件夹 $build_dir ..."
+  mkdir $build_dir
+  mkdir $build_dir/system
+
+  if [ -e original_update/boot.img ]
+  then
+    echo "复制 boot.img ..."
+    cp original_update/boot.img $build_dir
+  fi
+
+  echo "复制 system.img ..."
+  cp original_update/system.img $build_dir/system
+
+  if [ -e original_update/lib.img ]
+  then
+    echo "复制 lib.img ..."
+    mkdir -p $build_dir/system/lib
+    cp original_update/lib.img $build_dir/system/lib
+  fi
+
+fi
+
+
+#
+# 目录树
+#
+
+mkdir -p $build_dir/META-INF/com/google/android
+echo
+echo "添加 update-script 脚本 ..."
+cp tools/update_files/update-script $build_dir/META-INF/com/google/android/
+
+
+
+#
+# 检查 YAFFS/TAR/EXT*
+#
+
+system_dir=$build_dir/system
+
+scripts/check_if_img_yaffs $system_dir system.img
+
+is_yaffs=$?
+
+if [ "$is_yaffs" == "1" ]
+then
+
+  if [ `uname | grep CYGWIN` ]
+  then
+    unyaffs_file=unyaffs.exe
+  else
+    unyaffs_file=unyaffs
+  fi
+
+  scripts/compile_unyaffs
+  if [ "$?" == "1" ]
+  then
+    exit 0
+  fi
+
+  echo
+  echo "提取 system.img 的内容 ..."
+  cd $system_dir
+  result=`../../tools/unyaffs_files/$unyaffs_file system.img 2>/dev/null`
+
+else
+
+  cd $system_dir
+
+  #
+  # 检查 TAR 存档
+  #
+  test_tar=`od -A n --strings -j 0 -N 7 system.img`
+
+  if [ "$test_tar" == "system/" ]
+  then
+    echo "system.img is a TAR archive"
+    echo "Extracting files ..."
+    tar xf system.img -C ../
+
+  else
+
+    #
+    # 检查 Samsung EXT4
+    #
+    test_ext4=`od -A n -h -j 0 -N 5 system.img | sed 's/ //g'`
+
+    if [ "$test_ext4" == "ff3aed260001" ]
+    then
+
+      mv -fv system.img ../system.img.ext4
+      cd ../..
+      scripts/simg_ext4_files_to_working_folder no_create
+      exit $?
+
+    else
+
+      echo
+      echo "ROM 检测到 NON-YAFFS/NON-TAR 文件格式"
+      echo
+
+      # Get full path
+      system_dir=`pwd`
+
+      cd ../..
+      scripts/extract_ext3_img $system_dir system.img
+      cd $system_dir
+    fi
+  fi
+
+fi
+
+
+check_dump=`ls unyaffs*stackdump* 2>/dev/null`
+rm -f system.img 2>/dev/null
+
+if [ "$?" == "1" ]
+then
+  echo
+  echo "警告: system.img 正在使用中，请在应用程序关闭后手动删除文件。"
+  echo
+fi
+
+
+cd ..
+
+if [ "$check_dump" != "" ]
+then
+  echo
+  echo "错误: /system 文件夹中发现的 Stackdump 文件与 unyaffs 不兼容。"
+  echo
+  exit 1
+fi
+
+if [ ! -d system ]
+then
+  echo
+  echo "错误:  未发现 /system 文件夹!"
+  exit 1
+fi
+
+if [ ! -d system/framework ]
+then
+  echo
+  echo "错误: 未发现 /system/framework 文件夹!"
+  exit 1
+fi
+
+if [ ! -d system/app ]
+then
+  echo
+  echo "错误: 未发现 /system/app 文件夹!"
+  exit 1
+fi
+
+if [ "`ls system`" == "" ]
+then
+  echo
+  echo "错误: /system文件夹是空的!"
+  echo
+  exit 1
+fi
+
+
+
+#
+# lib.img内容将解压到 /system/lib 下
+#
+
+if [ -e system/lib/lib.img ]
+then
+
+  echo
+  echo "发现 lib.img , 其中包含 /system/lib 内容 ..."
+
+  cd ..
+
+  if [ `uname | grep CYGWIN` ]
+  then
+    scripts/press_enter
+  fi
+
+  scripts/extract_ext3_img $system_dir/lib lib.img
+
+  rm -f $system_dir/lib/lib.img 2>/dev/null
+
+  if [ "$?" == "1" ]
+  then
+    echo
+    echo "警告: lib.img 正在使用中，请在应用程序关闭后手动删除文件。"
+    echo
+  fi
+
+  #
+  # 检查 /system/lib 文件夹为空
+  #
+  lib_files=`ls $system_dir/lib`
+  if [ "$lib_files" == "lib.img" ] || [ "$lib_files" == "" ]
+  then
+    echo
+    echo "错误: 没有从 lib.img 中提取文件"
+    exit 1
+  fi
+
+else
+  cd ..
+  echo
+fi
+
+
+
+cd WORKING_*
+
+if [ ! -e boot.img ]
+then
+	cd ..
+  scripts/check_no_bootimg
+
+else
+
+	cd ..
+
+	#
+	# 检查 boot.img 的 Android 头位置
+	# 正确添加到工作文件夹
+	#
+
+	scripts/check_bootimg_header
+
+	# 不是有效的 boot.img
+	if [ "$?" == "1" ]
+	then
+
+		scripts/check_galaxy_s
+		is_gs=$?
+
+		if [ "$is_gs" == "1" ]
+		then
+		  cp_file=redbend_ua
+		else
+		  scripts/check_galaxy_s2
+		  is_gs2=$?
+
+		  if [ "$is_gs2" == "1" ]
+		  then
+		    cp_file=flash_image
+		  fi
+		fi
+
+		if [ "$is_gs" == "1" ] || [ "$is_gs2" == "1" ]
+		then
+		  echo
+		  echo "注意: 此 boot.img 实际上可能是一个内核(zImage)代替，将会"
+		  echo "重命名为 zImage."
+		  echo
+
+		  cd WORKING_*
+		  mv -v boot.img zImage
+		  echo
+		  cp -v ../tools/samsung_files/$cp_file .
+		  echo flash_zimage >> META-INF/com/google/android/update-script
+		  cd ..
+		  scripts/check_no_bootimg
+		fi
+	fi
+fi
+
+
+# Wi-fi 修复-某些华为设备所需要的
+scripts/fix_huawei_wifi
+
+# Sony Xperia 2011-12 devices - bloatware
+scripts/remove_xperia_bloat
+
+if [ "$2" != "kernel_only" ] && [ "$2" != "name_given" ]
+then
+  scripts/fix_update_script
+
+  # 修改update-script脚本与Nandroid 备份功能
+  scripts/fix_update_script_with_features
+
+  scripts/remove_recovery
+fi
+
+
+echo "$build_dir 列表:"
+echo
+ls -l $build_dir
+
+echo
+echo "Working 文件夹设置完成!"
+

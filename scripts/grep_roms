@@ -1,0 +1,32 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+cd original_update
+
+grep_cmd1=`find . -maxdepth 1 -type f | grep -i \\.zip$ | sed 's/ /temp_space/g' 2>/dev/null`
+grep_cmd2=`find . -maxdepth 1 -type f | grep -i \\.tar$ | sed 's/ /temp_space/g' 2>/dev/null`  
+grep_cmd3=`find . -maxdepth 1 -type f -name system.img 2>/dev/null`
+grep_cmd4=`find . -maxdepth 1 -type f | grep -i \\.app$ | sed 's/ /temp_space/g' 2>/dev/null`
+
+grep_cmd5=`find . -maxdepth 1 -type f -name factoryfs.img 2>/dev/null`
+grep_cmd6=`find . -maxdepth 1 -type f -name system.img.ext4 2>/dev/null`
+grep_cmd7=`find . -maxdepth 1 -type f -name factoryfs.rfs 2>/dev/null`
+
+grep_cmd8=`find . -maxdepth 1 -type f -name PDA.tar.md5 2>/dev/null`
+
+grep_cmd9=`find . -maxdepth 1 -type d | grep "\./WORKING_" | sed 's/ /temp_space/g' 2>/dev/null`
+
+grep_cmd10=`find . -maxdepth 1 -type f -name system.rfs 2>/dev/null`
+
+grep_cmd=`echo $grep_cmd1 $grep_cmd2 $grep_cmd3 $grep_cmd4 $grep_cmd5 $grep_cmd6 $grep_cmd7 \
+         $grep_cmd8 $grep_cmd9 $grep_cmd10 | sed -e 's/\.\///g' | sort -f`
+
+cd ..
+echo $grep_cmd

@@ -1,0 +1,67 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+img_dir=$1
+img_file=$2
+
+dos_path=`cygpath -wp $img_dir`
+
+echo
+echo "#####################################################################"
+echo
+echo " 请从 $img_file 解压文件前阅读此说明:"
+echo
+echo " 1) 请确保你已经安装 DiskInternals Linux Reader (读取器)，寻找"
+echo "    tools/diskinternals_windows/Linux_Reader.exe"
+echo
+echo " 2) 运行 Linux Reader 并使用 'Drives->Mount Image' mount:"
+echo "    $dos_path\\$img_file"
+echo
+echo " 3) 在 Linux Reader 的资源管理器中双击 'Linux native Volume 1' 使"
+echo "    image 文件夹显示"
+echo
+
+if [ "$img_file" == "ext4_cache.img" ]
+then
+  echo " 4) 打开 'recovery' 文件夹使 sec_csc.zip 显示"
+  echo
+  echo " 5) 右击 sec_csc.zip 文件，选择 'Save'（保存）并点击 'Next'（下一步）."
+  echo
+  echo " 6) 为 'Save directory structure'（保存目录结构）不检查框架并选择"
+  echo "    文件夹 $dos_path"
+
+else
+  echo " 4) 右击这些文件夹并选择 'Select All'（选择全部）"
+  echo
+  echo " 5) 再次右击并选择 'Save'（保存）.点击 'Next'（下一步）"
+  echo
+  echo " 6) 为 'Save directory structure'（保存目录结构）检查框架并选择"
+  echo "    文件夹 $dos_path"
+fi
+
+echo
+echo "    注意: 如果不改变文件夹此项目将会显示最后使用轨迹，因此确保"
+echo "          旧工作文件夹不可用！"
+echo
+echo " 7) 点击 'Next'（下一步）两次，等待解压完成则关闭 Linux Reader"
+echo
+echo "注意: 此项目将会添加管理员所有权以解压文件，所以此定制工具在移动或"
+echo "      删除 ROM 的工作文件夹后可能出现问题（除非在 Windows 文件管理器"
+echo "      中手动操作！"
+echo
+echo "#####################################################################"
+echo
+
+echo
+echo ">>>> 按回车键之前请完成以上步骤!<<<<"
+echo
+
+scripts/press_enter

@@ -1,0 +1,604 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本具有两个参数:
+#
+# $1 = 文件名称(强制)
+# $2 = "kernel_only" 或 "name_given" (可选)
+#
+
+
+update_file=$1
+
+echo "选择 $update_file"
+
+# Trim spaces in file name
+update_file2=`echo $update_file | tr ' ' '_'`
+
+if [ "$update_file" != "$update_file2" ]
+then
+  echo "重命名为 $update_file2"
+  mv "original_update/$update_file" original_update/$update_file2
+  update_file=$update_file2
+fi
+
+#
+# 工作文件夹名称
+#
+build_dir=`scripts/set_working_folder_name $2`
+
+
+#
+# 创建文件夹结构
+#
+
+echo
+echo "创建 Working 文件夹 $build_dir ..."
+mkdir $build_dir
+
+echo
+echo "从 ZIP 文件中提取 ROM ..."
+
+if [ `uname | grep CYGWIN` ]
+then
+
+  #
+  # Instead of 'unzip -qo' (the 'o' would force overwrite), show the user a prompt if a duplicate filename is encountered;
+  # e.g. In a case where we have /system/lib/libdivxdrm.so and /system/lib/libDivxDrm.so, it would ask to overwrite/rename
+  # or ignore one of them.  This way, the user won't be unaware of the duplicate file name.
+  #
+  # To show the prompt in the unzip command, disable the output to /dev/null. To prevent displaying warnings about excluded
+  # files (because /dev/null is not used anymore) put them in the 'rm' command instead of in unzip's '-x' arguments.
+  #
+  # This is not a faster method than "unzip -q ... -x ... 2>/dev/null", but it prevents the kitchen from hanging at unzip.
+  #
+  # Also, this is just a workaround, it doesn't fix the duplicate file name issue. You have two options to fix the issue:
+  #
+  # 1) Use an operating system that uses case-sensitive file names (Linux or OS X)
+  # 2) In the Windows registry, set HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel\obcaseinsensitive to 0 and
+  #    reboot... but do this at your own risk.
+  #
+  unzip -q original_update/$update_file -d $build_dir 2>&1 | tee unzip.log
+  unzip_result=$?
+
+  rm -f bootloader.img recovery.img recovery_signed.img userdata.img radio.img rcdata.img splash1.nb0 splash2.nb0 android-info.txt
+
+  replace_count=`grep -c replace unzip.log`
+  rm -f unzip.log
+
+  if [ $replace_count -gt 0 ]
+  then
+    echo
+    echo
+    echo "警告"
+    echo "-------"
+    echo "在你的 ZIP 存档中的一个文件夹下包含2个相同名称的文件，不同的"
+    echo "上限和下限的情况，这是因为你看到上面的提示。因为窗户是不区分"
+    echo "大小写的，它将文件作为一个单一的文件，而不是2不同的文件!"
+    echo
+    echo "你可以选择忽略这个问题 或 退出,下面有两个不同的解决办法："
+    echo
+    echo "1）使用操作系统的 区分大小写 文件名处理（Linux or OS X），或"
+    echo "2）在窗口中注册它，设置："
+    echo "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel\obcaseinsensitive 为0"
+    echo "并进行重启. 但是这将影响所有的 窗口 - 你要自己负责任!"
+    echo
+    echo
+    echo -n "你想忽略这个问题 (y/n)? (默认: n): "
+    read do_ignore
+
+    if [ "$do_ignore" != "y" ]
+    then
+      echo
+      echo "OK, 中止"
+      cd ..
+      exit 1
+    else
+      echo
+      echo "OK, 忽略它, 但是你的 ROM 可能存在稳定性问题!"
+    fi
+  fi
+
+else
+  unzip -q original_update/$update_file -d $build_dir -x bootloader.img recovery.img recovery_signed.img userdata.img radio.img rcdata.img splash1.nb0 splash2.nb0 android-info.txt 2>/dev/null
+
+  unzip_result=$?
+
+fi
+
+if [ "$unzip_result" == "9" ]
+then
+  echo
+  echo "错误: 无法提取 ROM!"
+  cd ..
+  exit 1
+fi
+
+cd $build_dir
+
+
+
+#
+#请检查所需的 IMG 文件
+#
+
+echo
+
+if [ "`find . -maxdepth 1 | grep .img | grep -c system_`" == "1" ]
+then
+  echo "重命名..."
+  mv -v system_*.img system.img
+fi
+
+rm -vf hboot*.img
+
+if [ "`find . -maxdepth 1 | grep .img | grep -c boot_`" == "1" ]
+then
+  echo "重命名..."
+  mv -v boot_*.img boot.img
+fi
+
+if [ "`find . -maxdepth 1 | grep .img | grep -c lib_`" == "1" ]
+then
+  echo "重命名..."
+  mv -v lib_*.img lib.img
+fi
+
+
+if [ -e system.img ] && [ ! -d system ]
+then
+
+  echo
+  echo "发现 system.img"
+  mkdir ../temp_img
+  mv system.img ../temp_img
+
+  if [ -e boot.img ]
+  then
+    echo "发现 boot.img"
+    mv boot.img ../temp_img
+  fi
+
+  if [ -e lib.img ]
+  then
+    echo "发现 lib.img"
+    mv lib.img ../temp_img
+  fi
+
+  echo
+  rm -vf *
+  mv ../temp_img/* .
+  rmdir ../temp_img
+
+  cd ..
+  scripts/img_files_to_working_folder no_create $2
+  exit $?
+
+
+#
+# Check for Samsung Galaxy S2 stock ROM
+#
+elif [ -e factoryfs.img ]
+then
+  echo "发现 factoryfs.img"
+
+  if [ -e hidden.img ]
+  then
+    echo "发现 hidden.img"
+  else
+    echo "未发现 hidden.img"
+  fi
+  if [ -e cache.img ]
+  then
+    echo "发现 cache.img"
+  else
+    echo "警告: 未发现 cache.img"
+  fi
+
+  if [ -e zImage ]
+  then
+    echo "发现 zImage"
+    cd ..
+    scripts/show_rooted_kernel_msg
+    cd $build_dir
+  else
+    echo "警告: 未发现 zImage"
+  fi
+
+  cd ..
+  scripts/simg_files_to_working_folder no_create $2
+  exit $?
+
+
+#
+# Check for Samsung Galaxy S2 variants such as the Skyrocket
+#
+elif [ -e system.img.ext4 ]
+then
+
+  echo
+  echo "发现 system.img.ext4"
+  mkdir ../temp_img
+  mv system.img.ext4 ../temp_img
+
+  if [ -e boot.img ]
+  then
+    echo "发现 boot.img"
+    mv boot.img ../temp_img
+  fi
+
+  if [ -e tomb.img.ext4 ]
+  then
+    echo "发现 tomb.img.ext4"
+    mv tomb.img.ext4 ../temp_img
+  fi
+
+  if [ -e cache.img.ext4 ]
+  then
+    echo "发现 cache.img.ext4"
+    mv cache.img.ext4 ../temp_img
+  fi
+
+  echo
+  rm -vf *
+  mv ../temp_img/* .
+  rmdir ../temp_img
+
+  cd ..
+  scripts/simg_ext4_files_to_working_folder no_create $2
+  exit $?
+
+
+
+#
+# Check for certain Samsung factory images
+#
+elif [ -e system.rfs ]
+then
+
+  cd ..
+  echo "发现 system.rfs"
+  scripts/rfs_files_to_working_folder no_create $2
+  exit $?
+
+
+
+#
+# Check for Samsung Galaxy S2 Nandroid backup
+#
+elif [ -e system.ext4.tar ]
+then
+
+  echo
+  echo "发现 system.ext4.tar"
+  mkdir ../temp_img
+  mv system.ext4.tar ../temp_img
+
+  if [ -e boot.img ]
+  then
+    echo "发现 boot.img"
+    mv boot.img ../temp_img
+  fi
+
+  echo
+  rm -vf *
+  mv ../temp_img/* .
+  rmdir ../temp_img
+
+  cd ..
+  scripts/sext4_tar_files_to_working_folder no_create $2
+  exit $?
+
+
+#
+# 检查三星 Samsung Galaxy S stock ROM
+#
+elif [ -e factoryfs.rfs ]
+then
+  echo "发现 factoryfs.rfs"
+
+  if [ -e cache.rfs ]
+  then
+    echo "发现 cache.rfs"
+  fi
+
+  if [ -e zImage ]
+  then
+    echo "发现 zImage"
+    cd ..
+    scripts/show_rooted_kernel_msg
+    cd $build_dir
+  else
+    echo "警告: 未发现 zImage"
+  fi
+
+  cd ..
+  scripts/rfs_files_to_working_folder no_create $2
+  exit $?
+
+#
+# Galaxy S again
+#
+elif [ -e PDA.tar ]
+then
+  echo "发现 PDA.tar"
+
+  if [ -e CSC.tar ]
+  then
+    echo "发现 CSC.tar"
+  else
+    echo "警告: 未发现 CSC.tar"
+  fi
+
+  if [ -e PHONE.tar ]
+  then
+    echo "发现 PHONE.tar"
+  fi
+
+  if [ -e zImage ]
+  then
+    echo "发现 zImage"
+  else
+    echo "警告: 未发现 zImage"
+  fi
+
+  cd ..
+  scripts/sgs_tar_files_to_working_folder no_create $2
+  exit $?
+
+#
+# Galaxy S yet again
+#
+elif [ -e PDA.tar.md5 ]
+then
+  echo "发现 PDA.tar.md5"
+
+  if [ -e CSC.tar.md5 ]
+  then
+    echo "发现 CSC.tar.md5"
+  else
+    echo "警告: 未发现 CSC.tar.md5"
+  fi
+
+  if [ -e PHONE.tar.md5 ]
+  then
+    echo "发现 PHONE.tar.md5"
+  fi
+
+  if [ -e zImage ]
+  then
+    echo "发现 zImage"
+  else
+    echo "警告: 未发现 zImage"
+  fi
+
+  cd ..
+  scripts/sgs_tarmd5_files_to_working_folder no_create $2
+  exit $?
+fi
+
+
+
+
+if [ -d patch ]
+then
+
+  echo
+  echo "错误: 这是一个 ROM 更新包，不是一个完整 ROM ! 正在正在中止 ..."
+  cd ..
+  exit 1
+
+elif [ ! -d system ] && [ ! -d SYSTEM ]
+then
+
+  echo
+  echo "错误: 未发现 system 文件夹"
+  cd ..
+  exit 1
+
+fi
+
+#
+# 检查 NAND ROM-将 BOOT 文件夹转换为 boot.img
+#
+if [ ! -e boot.img ]
+then
+  if [ -e boot/initrd.gz ] && [ -e boot/zImage ]
+  then
+    echo
+    echo "已检测到 NAND ROM ，为保证兼容性"
+    echo "厨房正在转换 boot 文件夹到 boot.img"
+    echo"（创建 ROM 时将会转换回去）..."
+
+    cd ..
+    scripts/ensure_nand_extracted no_clear
+    scripts/build_boot_img
+    cd WORKING_*
+
+  #
+  # Leaked ROMs 文件夹格式分区
+  #
+  elif [ -e BOOT/kernel ] && [ -e BOOT/base ] && [ -e BOOT/cmdline ] && [ -d BOOT/RAMDISK ]
+  then
+    echo "分区是文件夹格式；BOOT 文件夹需要"
+    echo "转换成 boot.img 格式 ..."
+
+    cd ..
+    scripts/build_boot_img_from_folder_form
+    cd WORKING_*
+
+  else
+
+    #
+    # 请检查 ROM 里面有没有 boot.img
+    #
+
+    build_dir=`pwd`
+    cd ..
+    scripts/check_no_bootimg $build_dir
+    cd $build_dir
+
+    if [ ! -e boot.img ]
+    then
+      echo "错误: 未发现 boot.img, 无法继续!"
+      echo
+      cd ..
+      echo "删除 $build_dir ..."
+      rm -rf $build_dir
+      echo
+      exit 1
+    fi
+  fi
+fi
+
+
+#
+# 删除坏的符号链接 (*.lnk)
+#
+if [ -d system/bin ]
+then
+  rm -fv system/bin/*.lnk
+fi
+
+if [ -d system/xbin ]
+then
+  rm -fv system/xbin/*.lnk
+fi
+
+
+if [ -d META-INF ]
+then
+  cd META-INF
+  rm -f CERT.RSA CERT.SF MANIFEST.MF
+  cd ..
+else
+  echo
+  echo "警告:  Working 文件夹中未发现 META-INF 文件夹"
+fi
+
+
+cd ..
+echo
+
+if [ "$2" != "kernel_only" ] && [ "$2" != "name_given" ]
+then
+
+  scripts/check_no_update_script
+  error_code=$?
+
+  cd WORKING_*
+  cd META-INF/com/google/android
+
+
+  if [ -e updater-script ] && [ -e update-script ]
+  then
+    echo
+    echo "警告: 发现 updater-script 和 update-script 两种脚本"
+    echo -n "删除 updater-script 脚本(y/n)? (默认为: y) "
+
+    read enterRemove
+    echo
+
+    if [ "$enterRemove" == "n" ]
+    then
+      echo "继续保留 updater-script 脚本，但是必须删除 update-script 脚本"
+      rm -rf update-script
+
+      cd ../../../../..
+      scripts/check_no_update_script
+      error_code=$?
+
+      cd WORKING_*
+      cd META-INF/com/google/android
+
+    else
+      echo "删除 updater-script 脚本"
+      rm -f updater-script
+    fi
+
+  fi
+  if [ -e update-binary ] && [ -e update-script ]
+  then
+    echo
+    echo "警告: 发现 update-binary 和 update-script 两种不兼容脚本！"
+    echo -n "删除 update-binary 脚本(y/n)? (默认为: y) "
+    read enterRemove
+    if [ "$enterRemove" != "n" ]
+    then
+      echo "删除 update-binary 脚本"
+      rm -f update-binary
+    else
+      echo "不删除 update-binary 脚本"
+    fi
+  fi
+
+
+  if [ -e update-script ]
+  then
+
+    #
+    # 删除注释以防止与厨房冲突问题
+    #
+    sed -i -e '/^#/d' update-script
+  fi
+
+  rm -f update-script.bak
+
+  cd ../../../../..
+
+  #
+  # 检查与官方recovery相关的东西
+  #
+  scripts/remove_recovery
+fi
+
+echo
+echo "META-INF/com/google/android 列表:"
+
+cd WORKING_*
+cd META-INF/com/google/android
+ls -l
+cd ../../../../..
+
+
+
+#
+# 完成
+#
+
+cd $build_dir
+
+echo
+echo "$build_dir 列表:"
+ls -l
+
+echo
+
+if [ -d system ]
+then
+  echo " Working 文件夹设置已完成!"
+  cd ..
+
+  if [ "$error_code" == "1" ]
+  then
+    exit 1
+  else
+    exit 0
+  fi
+
+else
+  echo "错误: 设置失败"
+  cd ..
+  scripts/press_enter
+  exit 1
+fi
+
+cd ..

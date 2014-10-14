@@ -1,0 +1,355 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有三个可选参数:
+#
+# $1 = 页面大小 / kernel 在 boot.img 中的偏移(十进制)
+# $2 = kernel base 偏移量 (以十六进制, 例如： 0x200000; 需要 $1 定义)
+# $3 = 命令行 (需要 $1 和 $2 定义)
+#
+
+echo
+
+if [ -d BOOT-EXTRACTED ]
+then
+  echo "发现 BOOT-EXTRACTED 文件夹，检查内容 ..."
+
+  if [ -d BOOT-EXTRACTED/boot.img-ramdisk ]
+  then
+    echo "发现 boot.img-ramdisk"
+
+    if [ -e BOOT-EXTRACTED/zImage ]
+    then
+      echo "发现 zImage"
+    else
+      echo "找不到 BOOT-EXTRACTED/zImage"
+      exit 0
+    fi
+
+  else
+    echo "找不到 boot-extracted/boot.img-ramdisk 文件夹!"
+    exit 0
+  fi
+
+else
+  echo "找不到 BOOT-EXTRACTED 文件夹!"
+  exit 0
+fi
+
+
+if [ -d WORKING_* ]
+then
+  echo "发现 Working 文件夹"
+else
+  echo "未发现 Working 文件夹!"
+  exit 0
+fi
+
+
+
+if [ "$1" == "" ]
+then
+
+  #
+  # 确定在新的boot.img中使用kernel偏移量,
+  # 基于当前的 boot.img 或 /boot 文件夹.
+  #
+
+  cd WORKING_*
+
+  if [ -e boot.img ]
+  then
+
+    cd ..
+    scripts/check_kernel_offset
+    res=$?
+
+    if [ "$res" != "0" ]
+    then
+      exit 0
+    fi
+
+  else
+
+    if [ ! -e boot/initrd.gz ] || [ ! -e boot/zImage ]
+    then
+      echo "在 Working 文件夹下未发现 boot.img!"
+      cd ..
+      exit 0
+    else
+
+      # 使用假的 base 和命令行创建 boot.img
+      # 由于我们不需要boot.img和正在使用 NAND 方法
+      # boot.img 不会在最后的 NAND ROM.
+
+      base=0x11800000
+      cmd_line="dsixda NAND"
+
+      cd ..
+    fi
+  fi
+
+else
+
+  #
+  # 使用 hard-coded 值
+  #
+
+  scripts/set_kernel_offset_files $1
+
+  if [ "$2" != "" ]
+  then
+    base=$2
+
+    if [ "$3" != "" ]
+    then
+      cmd_line=$3
+    fi
+  fi
+
+fi
+
+
+
+#
+# Check for MT65xx
+#
+
+cd WORKING_*
+working_folder=`pwd`
+cd ..
+dec_offset=`scripts/get_boot_img_page_size $working_folder`
+scripts/check_mt65xx_bootimg $working_folder $dec_offset 1>/dev/null
+mt65xx=$?
+
+
+
+#
+# 编译 mkboot*
+#
+
+if [ "$mt65xx" == "1" ]
+then
+  mkbootimg_src=mkbootimg_mt65xx.c
+else
+  mkbootimg_src=mkbootimg.c
+fi
+mkbootimg_out=mkbootimg
+
+if [ `uname | grep CYGWIN` ]
+then
+  mkbootfs_file=mkbootfs.exe
+  mkbootimg_file=$mkbootimg_out.exe
+else
+  mkbootfs_file=mkbootfs
+  mkbootimg_file=$mkbootimg_out
+fi
+
+
+if [ -e tools/mkboot/$mkbootfs_file ]
+then
+  echo "发现 $mkbootfs_file"
+else
+  echo
+  echo "编译 mkbootfs ..."
+  cd tools/mkboot
+  gcc -o mkbootfs mkbootfs.c 2>/dev/null
+  cd ../..
+
+  if [ -e tools/mkboot/$mkbootfs_file ]
+  then
+    echo "mkbootfs 编译成功"
+  else
+    echo "错误: mkbootfs 编译失败!"
+    exit 0
+  fi
+fi
+
+
+if [ -e tools/mkboot/$mkbootimg_file ]
+then
+  rm -f $mkbootimg_file
+fi
+
+echo
+echo "编译 mkbootimg ..."
+cd tools/mkboot
+gcc -c rsa.c
+gcc -c sha.c
+gcc rsa.o sha.o $mkbootimg_src -w -o $mkbootimg_out
+rm *.o
+cd ../..
+
+if [ -e tools/mkboot/$mkbootimg_file ]
+then
+  echo "$mkbootimg_out 编译成功"
+else
+  echo "错误: $mkbootimg_out 编译失败!"
+  exit 0
+fi
+
+
+cp tools/mkboot/$mkbootfs_file BOOT-EXTRACTED/
+cp tools/mkboot/$mkbootimg_file BOOT-EXTRACTED/
+cd BOOT-EXTRACTED
+
+
+#
+# 运行 mkbootfs
+#
+
+echo
+echo "创建 ramdisk cpio 存档 ..."
+./$mkbootfs_file boot.img-ramdisk | gzip > ramdisk.gz
+
+
+
+
+cd ..
+cd WORKING_*
+
+if [ -e boot.img ]
+then
+
+  cd ..
+  echo
+
+  #
+  # 获取原始大小的 boot.img
+  #
+  size_orig=`scripts/get_boot_img_size`
+
+
+  #
+  # 在运行 mkbootimg 之前确定kernel base地址
+  #
+
+  if [ "$base" == "" ]
+  then
+    echo "在尝试确定 kernel base 地址 ..."
+    base=`scripts/get_kernel_base_addr`
+  fi
+
+  echo "使用 $base 的 base 地址"
+
+
+  #
+  # 如果没有输入参数，然后找出命令行
+  #
+  ramdisk_addr=`scripts/get_ramdisk_addr`
+
+  echo "使用ramdisk装载$ramdisk_addr地址"
+
+
+  #
+  # If no parameters entered, then find out the command line
+  #
+  # NOTE: Check the first two parameters to determine whether the user set the
+  # command line to an empty string intentionally
+  #
+  if [ "$3" == "" ]  && [ "$1" == "" ]
+  then
+    echo "在尝试确定命令行参数 ..."
+    cmd_line=`scripts/get_cmdline`
+  fi
+
+  if [ "$cmd_line" == "" ]
+  then
+    echo "没有命令行"
+  else
+    echo "使用命令行: $cmd_line"
+  fi
+
+else
+  cd ..
+fi
+
+
+#################################################
+#
+# 运行 mkbootimg 创建一个新的boot.img
+#
+#################################################
+
+cd BOOT-EXTRACTED
+
+echo
+echo "生成新的 boot.img ..."
+
+ramdisk_params=""
+if [ "$ramdisk_addr" != "" ]
+then
+  ramdisk_params="--ramdiskaddr $ramdisk_addr"
+fi
+
+if [ "$cmd_line" == "" ]
+then
+  ./$mkbootimg_file --kernel zImage --ramdisk ramdisk.gz -o newBoot.img --base $base $ramdisk_params
+else
+  ./$mkbootimg_file --kernel zImage --ramdisk ramdisk.gz --cmdline "$cmd_line" -o newBoot.img --base $base $ramdisk_params
+fi
+
+
+if [ -e newBoot.img ]
+then
+  echo
+  echo "newBoot.img 创建完成"
+
+  echo "移动 Working 文件夹为 boot.img"
+  cd ../WORKING_*
+  mv -f ../BOOT-EXTRACTED/newBoot.img boot.img
+
+  if [ "$size_orig" != "" ]
+  then
+
+    #
+    # 获取新的 boot.img 大小
+    #
+    cd ..
+    size_new=`scripts/get_boot_img_size`
+    cd WORKING_*
+
+    if [ "$size_new" != "" ]
+    then
+      echo
+      echo "boot.img size"
+      echo "Old: $size_orig"
+      echo "New: $size_new"
+    fi
+  fi
+
+  if [ -d boot ] && [ -e boot/initrd.gz ] && [ -e boot/zImage ]
+  then
+    echo
+    echo "删除 NAND boot 文件夹 ..."
+    rm -rf boot
+  fi
+
+  cd ..
+
+  echo
+  echo "删除 BOOT-EXTRACTED 文件夹 ..."
+  rm -rf BOOT-EXTRACTED
+
+  exit_code=1
+
+else
+  echo
+  echo "newBoot.img 没有创建!"
+
+  rm $mkbootfs_file
+  rm $mkbootimg_file
+
+  cd ..
+  exit_code=0
+fi
+
+exit $exit_code

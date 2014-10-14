@@ -1,0 +1,152 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+if [ -d MY_DEVICE_WORKING ]
+then
+  echo "删除 MY_DEVICE_WORKING 文件夹"
+  rm -rf MY_DEVICE_WORKING
+fi
+
+if [ -d MY_KERNEL ]
+then
+  echo "删除 MY_KERNEL 文件夹"
+  rm -rf MY_KERNEL
+fi
+
+if [ -d BOOT-EXTRACTED ]
+then
+  echo "删除 BOOT-EXTRACTED 文件夹"
+  rm -rf BOOT-EXTRACTED
+fi
+
+
+
+clear
+echo
+echo "*************************************************************"
+echo
+echo "--> 获取当前用于你的设备的 ROM <--"
+echo
+echo "*************************************************************"
+
+scripts/check_rom no_info kernel_only
+
+# 如果工作文件夹处于打开状态并不能移动，正确地处理错误
+if [ "$?" != "1" ]
+then
+  scripts/press_enter
+else
+  exit 1
+fi
+
+if [ -d WORKING_* ]
+then
+
+  cd WORKING_*
+
+  if [ -e zImage ]
+  then
+    mkdir ../BOOT-EXTRACTED
+    cp -v zImage ../BOOT-EXTRACTED/
+    cd ..
+
+  else
+    cd ..
+    scripts/ensure_boot_extracted
+  fi
+
+else
+  exit 0
+fi
+
+if [ ! -d BOOT-EXTRACTED ]
+then
+  echo "错误: 未发现 BOOT-EXTRACTED 文件夹"
+  exit 0
+fi
+
+
+echo
+echo "重命名 Working 文件夹为 MY_DEVICE_WORKING"
+mv WORKING_* MY_DEVICE_WORKING
+
+echo
+echo "创建文件夹 MY_KERNEL"
+mkdir MY_KERNEL
+
+
+
+#
+# 复制我的设备 kernel 到 MY_KERNEL
+# 也可以复制我的设备 modules/drivers to MY_KERNEL
+#
+
+echo "复制 zImage 到 MY_KERNEL"
+cp BOOT-EXTRACTED/zImage MY_KERNEL/
+
+#
+# 我们需要这一步使我们能够知道 base 地址
+# 移植时!
+#
+echo "复制 boot.img 到 MY_KERNEL"
+cp MY_DEVICE_WORKING/boot.img MY_KERNEL/
+
+
+if [ -d MY_DEVICE_WORKING/system/lib/modules ]
+then
+  mkdir -p MY_KERNEL/system/lib/modules
+  echo
+  echo "复制 wireless (system/lib/modules) ..."
+  cp -r MY_DEVICE_WORKING/system/lib/modules/* MY_KERNEL/system/lib/modules/
+fi
+
+if [ -d MY_DEVICE_WORKING/system/usr ]
+then
+  mkdir -p MY_KERNEL/system/usr
+  echo
+  echo "复制 buttons (system/usr) ..."
+  cp -r MY_DEVICE_WORKING/system/usr/* MY_KERNEL/system/usr/
+fi
+
+if [ -d MY_DEVICE_WORKING/system/lib/hw ]
+then
+  mkdir -p MY_KERNEL/system/lib/hw
+  echo
+  echo "复制 lights (system/lib/hw) ..."
+  cp -r MY_DEVICE_WORKING/system/lib/hw/* MY_KERNEL/system/lib/hw/
+fi
+
+if [ -e MY_DEVICE_WORKING/system/etc/vold.fstab ]
+then
+  mkdir -p MY_KERNEL/system/etc
+  echo
+  echo "复制存储卡挂载信息 (system/etc/vold.fstab) ..."
+  cp -v MY_DEVICE_WORKING/system/etc/vold.fstab MY_KERNEL/system/etc/
+fi
+
+if [ -e MY_DEVICE_WORKING/system/etc/vold.conf ]
+then
+  mkdir -p MY_KERNEL/system/etc
+  echo
+  echo "复制存储卡挂载信息 (system/etc/vold.conf) ..."
+  cp -v MY_DEVICE_WORKING/system/etc/vold.conf MY_KERNEL/system/etc/
+fi
+
+if [ -d MY_DEVICE_WORKING/system/modules ]
+then
+  mkdir -p MY_KERNEL/system/modules
+  echo
+  echo "复制其它modules (system/modules) ..."
+  cp -r MY_DEVICE_WORKING/system/modules/* MY_KERNEL/system/modules/
+fi
+
+rm -rf BOOT-EXTRACTED

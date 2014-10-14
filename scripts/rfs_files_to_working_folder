@@ -1,0 +1,280 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = "no_create" 或 "创建" 或 "create_working
+#         - 必须指定 no_create 如果工作文件夹已经存在
+# $2 = "kernel_only" 或 "name_given" - 如果这指定则是强制性的 $1
+#
+
+if [ "$1" == "no_create" ]
+then
+  build_dir=`ls | grep -m 1 ^WORKING_`
+
+  if [ -e $build_dir/factoryfs.rfs ]
+  then
+    system_img=factoryfs.rfs
+    csc_img=cache.rfs
+  elif [ -e $build_dir/system.rfs ]
+  then
+    system_img=system.rfs
+    csc_img=csc.rfs
+  else
+    echo "错误: 在 $build_dir 中没有发现系统 RFS 镜像!"
+    exit 1
+  fi
+
+  mkdir $build_dir/system
+  mv $build_dir/$system_img $build_dir/system
+
+  if [ -e $build_dir/$csc_img ]
+  then
+    mv $build_dir/$csc_img $build_dir/system
+  else
+    scripts/show_cache_warning $csc_img
+  fi
+
+  # Sometimes images have zero permissions set when extracted from TAR archive,
+  # 使它们无法读取!
+  chmod -R 777 $build_dir
+
+else
+
+  #
+  # 检查 for $system_img, $csc_img 和 zImage/boot.img 在 original_update
+  #
+
+  if [ -e original_update/factoryfs.rfs ]
+  then
+    system_img=factoryfs.rfs
+    csc_img=cache.rfs
+
+    if [ -e original_update/zImage ]
+    then
+      echo "发现 original_update/zImage"
+      scripts/show_rooted_kernel_msg
+      kernel_img=zImage
+    else
+      echo "警告: 未发现 original_update/zImage"
+    fi
+
+  elif [ -e original_update/system.rfs ]
+  then
+    system_img=system.rfs
+    csc_img=csc.rfs
+
+    if [ -e original_update/boot.img ]
+    then
+      echo "发现 original_update/boot.img"
+      kernel_img=boot.img
+    else
+      echo "警告: 未发现 original_update/boot.img"
+    fi
+
+  else
+    echo "错误: 在 original_update 文件夹没有发现系统 RFS 镜像!"
+    exit 1
+  fi
+
+  echo "发现 original_update/$system_img"
+
+  if [ -e original_update/$csc_img ]
+  then
+    echo "发现 original_update/$csc_img"
+  else
+    scripts/show_cache_warning original_update/$csc_img
+  fi
+
+
+  #
+  # 工作文件夹名称
+  #
+  build_dir=`scripts/set_working_folder_name $2`
+
+  echo
+  echo "创建 Working 文件夹 $build_dir ..."
+  mkdir $build_dir
+  mkdir $build_dir/system
+
+  echo
+
+  # 内核可选
+  if [ -e original_update/$kernel_img ]
+  then
+    cp -vf original_update/$kernel_img $build_dir
+  fi
+
+  # Cache 可选
+  if [ -e original_update/$csc_img ]
+  then
+    cp -vf original_update/$csc_img $build_dir/system
+  fi
+
+  cp -vf original_update/$system_img $build_dir/system
+
+fi
+
+
+if [ "$1" == "no_create" ]
+then
+  src_dir=$build_dir/system
+else
+  src_dir=original_update
+fi
+
+system_dir=$build_dir/system
+cd $system_dir
+
+# 获取完整路径
+system_dir=`pwd`
+cd ../..
+
+
+#
+# Directory tree
+#
+
+mkdir -p $build_dir/META-INF/com/google/android
+echo
+echo "正在添加 update-script 刷机脚本 ..."
+cp tools/update_files/update-script $build_dir/META-INF/com/google/android/
+echo
+
+#
+# 从 $system_img 提取文件
+#
+
+if [ `uname | grep CYGWIN` ]
+then
+  scripts/show_magiciso $system_dir $system_img
+else
+  scripts/extract_ext3_img $system_dir $system_img
+fi
+
+cd $system_dir
+
+rm -f $system_img 2>/dev/null
+if [ "$?" == "1" ]
+then
+  echo
+  echo "警告: $system_img 正在使用中，请在应用程序退出后进行手动删除。"
+  echo
+fi
+
+cd ..
+
+if [ ! -d system ]
+then
+  echo
+  echo "错误:  未发现 /system 文件夹!"
+  exit 1
+fi
+
+if [ ! -d system/framework ]
+then
+  echo
+  echo "错误: 未发现 /system/framework 文件夹!"
+  exit 1
+fi
+
+if [ ! -d system/app ]
+then
+  echo
+  echo "错误: 未发现 /system/app 文件夹!"
+  exit 1
+fi
+
+if [ "`ls system`" == "" ]
+then
+  echo
+  echo "错误: /system文件夹是空的!"
+  echo
+  exit 1
+fi
+
+
+cd ..
+
+echo
+echo "$system_img 文件已经完全解包到:"
+echo "  $system_dir"
+
+
+if [ -e $src_dir/$csc_img ]
+then
+  echo
+  echo "你想提取 '客户软件定制'(CSC)"
+  echo -n "解压来自 $csc_img (y/n)? (默认为: y): "
+
+  read do_extract
+  echo
+
+  if [ "$do_extract" == "n" ]
+  then
+    rm -vf $src_dir/$csc_img
+    echo
+  else
+
+    #
+    # 从 $csc_img 提取文件
+    #
+    if [ `uname | grep CYGWIN` ]
+    then
+      scripts/show_magiciso $system_dir $csc_img
+    else
+      scripts/extract_ext3_img $system_dir $csc_img
+    fi
+
+    cd $system_dir
+
+    rm -f $csc_img 2>/dev/null
+    if [ "$?" == "1" ]
+    then
+      echo
+      echo "警告: $csc_img 正在使用中，请在应用程序退出后进行手动删除。"
+      echo
+    fi
+
+    cd ../..
+    scripts/unzip_csc
+  fi
+fi
+
+
+
+#
+# 插入假 boot.img
+#
+scripts/check_no_bootimg
+
+
+#
+# update-script 脚本 and 和其他调整
+#
+if [ "$2" != "kernel_only" ] && [ "$2" != "name_given" ]
+then
+  scripts/fix_update_script
+
+  # update-script 脚本与修改 Nandroid 备份功能
+  scripts/fix_update_script_with_features
+
+  scripts/remove_recovery
+fi
+
+
+echo
+echo "$build_dir 列表:"
+echo
+ls -l $build_dir
+
+echo
+echo "Working 文件夹设置完成!"

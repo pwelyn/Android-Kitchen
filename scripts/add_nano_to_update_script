@@ -1,0 +1,71 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+cd WORKING_*
+cd META-INF/com/google/android
+
+echo
+
+if [ -e update-script ]
+then
+
+  if [ "`grep -om 1 nano update-script`" == "nano" ]
+  then
+    echo "update-script 脚本中已经存在 nano 内容"
+
+  else
+
+    #
+    # Do this to prevent conflicts with the update-script in ROMs that already have the binary
+    #
+    if [ -e ../../../../system/bin/nano ]
+    then
+
+      if [ "`find ../../../../system/xbin -name nano`" == "" ]
+      then
+        echo "复制 system/bin/nano 到 system/xbin/nano"
+        cp -f ../../../../system/bin/nano ../../../../system/xbin/nano
+      fi
+    fi
+
+    echo "添加 nano 内容到 update-script 脚本中"
+
+    if [ `grep -c "set_perm_recursive.*SYSTEM:xbin[ ]*$" update-script` != 0 ]
+    then
+      sed -i -e 's/set_perm_recursive\(.*\)SYSTEM:xbin[ ]*$/set_perm_recursive\1SYSTEM:xbin\nset_perm 0 0 04755 SYSTEM:xbin\/nano\n/' update-script
+
+    elif [ `grep -c "init.goldfish.sh" update-script` != 0 ]
+    then
+      sed -i -e 's/set_perm 0 2000 0550 SYSTEM:etc\/init.goldfish.sh/set_perm 0 2000 0550 SYSTEM:etc\/init.goldfish.sh\nset_perm 0 0 04755 SYSTEM:xbin\/nano\n/g' update-script
+
+    elif [ `grep -c "write_raw_image .*:boot.img BOOT:" update-script` != 0 ]
+    then
+      sed -i -e 's/write_raw_image \(.*:boot.img\) BOOT:/set_perm 0 0 04755 SYSTEM:xbin\/nano\nwrite_raw_image \1 BOOT:/' update-script
+
+    else
+      echo "set_perm 0 0 04755 SYSTEM:xbin/nano" >> update-script
+    fi
+
+    if [ "`grep -om 1 nano update-script`" != "nano" ]
+    then
+      echo "错误: 无法在 update-script 脚本中添加 nano 内容"
+    fi
+  fi
+
+else
+  echo "错误: 未发现 update-script 脚本!"
+  cd ../../../../..
+  exit 1
+fi
+
+cd ../../../../..
+
+scripts/fix_update_script_blanks

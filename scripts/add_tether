@@ -1,0 +1,152 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+clear
+echo
+echo "-----------------------------------------------------------------"
+echo
+echo "无线热点共享功能能够使你的设备变成一个无线热点。使用 Android 2.2（Froyo）"
+echo "或者更高版本的设备一般内置了这个功能，不需要添加。"
+echo
+echo "此功能应用程序会添加到 /data/app 文件夹下，如果 /data/app功能没有"
+echo "开启，此脚本将自动开启。"
+echo
+echo "-----------------------------------------------------------------"
+echo
+
+scripts/pre_froyo_check
+is_old=$?
+
+if [ "$is_old" == "1" ]
+then
+  echo -n "继续并添加无线热点(y/n)? (默认: y): "
+  read do_tether
+
+  if [ "$do_tether" == "n" ]
+  then
+    exit 0
+  fi
+elif [ "$is_old" == "2" ]
+then
+  echo "错误: 未发现 system 文件夹!"
+  exit 0
+
+else
+  echo -n "ROM 版本高于 Android 2.1 ,仍然添加(y/n)? (默认: n): "
+  read do_tether
+
+  if [ "$do_tether" != "y" ]
+  then
+    exit 0
+  fi
+fi
+
+
+scripts/ensure_boot_extracted
+
+if [ ! -d WORKING_* ]
+then
+  exit 0
+fi
+
+
+
+if [ -d BOOT-EXTRACTED ]
+then
+  echo
+else
+  echo "未发现 BOOT-EXTRACTED 文件夹"
+  exit 0
+fi
+
+
+#
+# 检查 root (看看 default.prop 在 boot.img)
+#
+
+echo "无线热点功能需要已获得 Root 权限的 ROM"
+
+if [ -d BOOT-EXTRACTED/boot.img-ramdisk ]
+then
+  cd BOOT-EXTRACTED/boot.img-ramdisk
+else
+  echo "错误: 未发现 BOOT-EXTRACTED/boot.img-ramdisk 文件夹!"
+  exit 0
+fi
+
+if [ "`grep -m 1 ro.secure default.prop`" == "ro.secure=1" ]
+then
+  echo "ROM 没有完全获取 Root 权限，因为 ro.secure=1 在 default.prop 中!"
+  echo "我们将会使系统获得 Root 权限 ..."
+  echo
+  echo "准备好了请按回车键"
+  read enterKey
+  cd ../..
+  rm -rf BOOT-EXTRACTED
+  scripts/do_root
+
+else
+  echo "Boot.img 已经解除了安全权限"
+  cd ../..
+  rm -rf BOOT-EXTRACTED
+fi
+
+
+if [ -d WORKING_* ]
+then
+  echo
+else
+  exit 0
+fi
+
+
+#
+# 复制 APK
+#
+
+tether_file=wireless_tether*
+
+cd WORKING_*
+
+tether_list=( wireless_tether* android.tether* )
+tether_found=0
+
+for find_tether in ${tether_list[@]}
+do
+
+  res=`find . -name $find_tether`
+  if [ "$res" != "" ]
+  then
+    echo "已发现 $res"
+    tether_found=1
+  fi
+
+done
+
+
+if [ $tether_found == 1 ]
+then
+  cd ..
+  exit 0
+
+else
+  cd ..
+  scripts/add_data_app dont_ask
+  cd WORKING_*
+
+  echo
+  echo "复制 app ..."
+  cp -v ../tools/apps/$tether_file data/app/
+  cd ..
+fi
+
+echo
+echo "完成"

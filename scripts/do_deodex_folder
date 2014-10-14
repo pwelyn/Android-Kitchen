@@ -1,0 +1,214 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个参数:
+#
+# $1 = 对 /system 下的文件夹进行 Deodex 操作(强制)
+#      例如 framework
+#      例如 "framework app"
+# $2 = 是否启用日志(y 或 n) (可选)
+#
+
+dir_list=$1
+do_log=$2
+
+if [ "$dir_list" == "" ]
+then
+  echo "没有指定 deodexing 文件夹!"
+  exit 0
+fi
+
+base_dir=`pwd`
+api_level=`scripts/get_api_level`
+
+cd WORKING_*
+
+num_odex_fr=`find system/framework | grep -c "\.odex$"`
+num_odex_priv=`find system/priv-app | grep -c "\.odex$"`
+num_odex_app=`find system/app | grep -c "\.odex$"`
+
+
+#
+# 创建日志文件
+#
+
+if [ "$do_log" == "" ]
+then
+  echo
+  echo -n "是否生成日志文件(y/n)? (默认: y): "
+  read do_log
+fi
+
+if [ "$do_log" != "n" ]
+then
+  do_log=y
+else
+  do_log=n
+fi
+
+date_str=`date '+%m%d%y_%H%M%S'`
+log_file=deodex_$date_str.log
+
+cd ..
+version=`scripts/get_smali_version`
+cd WORKING_*
+
+if [ "$do_log" == "y" ]
+then
+  echo
+  echo "创建日志文件 $log_file ..."
+
+  echo "" >> ../$log_file
+  echo "smali/baksmali version: $version" >> ../$log_file
+fi
+
+#
+# 通过指定每个文件夹
+#
+
+for folder in ${dir_list[@]}
+do
+
+  if [ "$do_log" == "y" ]
+  then
+    echo "" >> ../$log_file
+    echo "文件夹: $folder" >> ../$log_file
+    echo "-------------------" >> ../$log_file
+  fi
+
+  if [ $folder == framework ]
+  then
+    num_odex_folder=$num_odex_fr
+  elif [ $folder == app ]
+  then
+    num_odex_folder=$num_odex_app
+  elif [ $folder == priv-app ]
+  then
+    num_odex_folder=$num_odex_priv
+  else
+    echo
+    echo "错误: $folder 文件夹不可用!"
+
+    if [ "$do_log" == "y" ]
+    then
+      echo "无效文件夹" >> ../$log_file
+    fi
+
+    continue
+  fi
+
+  count=0
+  found_error=0
+  path=system/$folder
+
+  echo
+  echo
+  echo "跳转到 $path ..."
+  echo
+
+  cd $path
+
+  grep_cmd=`find . | grep "\.odex$" | sed 's/.\///g' | sort -f`
+
+  if [ "$grep_cmd" == "" ]
+  then
+    echo "在 $path 中未发现任何东西!"
+
+    if [ "$do_log" == "y" ]
+    then
+      echo "这里什么都没有" >> ../../../$log_file
+    fi
+
+  else
+
+    #
+    # 最后,deodex 每个文件
+    #
+    cp -f ../../../tools/deodex_files/baksmali-$version.jar baksmali.jar
+    cp -f ../../../tools/deodex_files/smali-$version.jar smali.jar
+
+    for odex_file in $grep_cmd
+    do
+
+      count=$(($count+1))
+      echo
+      echo "一共$num_debug_folder文件在$path文件夹，正在操作第$count个$debug_file"
+
+      while [ -e $odex_file ]
+      do
+
+        ../../../scripts/do_deodex_file $api_level $odex_file ../framework
+
+        if [ -e $odex_file ]
+        then
+
+          if [ -e $odex_file ]
+          then
+
+            echo "错误: 正在中止 $odex_file"
+            found_error=1
+
+            if [ "$do_log" == "y" ]
+            then
+              echo "* 错误: 正在中止 $odex_file!" >> ../../../$log_file
+            fi
+
+            break
+
+          elif [ ! -e $odex_file ]
+          then
+            if [ "$do_log" == "y" ]
+            then
+              echo "$odex_file deodexed 成功" >> ../../../$log_file
+            fi
+
+            break
+          fi
+
+        else
+          if [ "$do_log" == "y" ]
+          then
+            echo "$odex_file deodexed 成功" >> ../../../$log_file
+          fi
+        fi
+      done
+
+    done
+
+    rm -f baksmali.jar
+    rm -f smali.jar
+
+    echo
+    echo "完成 $path"
+
+    if [ "$found_error" == "1" ]
+    then
+      echo
+      echo "警告： 以下 odex 文件不能 deodex(你可以重试 deodex 这些文件):"
+      echo `ls *.odex`
+      echo
+      cd ../..
+      break
+    fi
+
+  fi
+
+  cd ../..
+
+done
+
+if [ "$do_log" == "y" ]
+then
+  echo
+  echo "deodexing 的日志已被记录在 $log_file"
+fi
+
+cd $base_dir

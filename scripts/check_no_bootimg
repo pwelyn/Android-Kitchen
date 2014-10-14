@@ -1,0 +1,49 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+dest_dir=$1
+kitchen_dir=`pwd`
+
+if [ "$dest_dir" == "" ]
+then
+  cd WORKING_*
+  dest_dir=`pwd`
+else
+  cd $dest_dir
+fi
+
+if [ ! -e boot.img ]
+then
+
+  echo
+  echo  "警告: 找不到有效的 boot.img ，您可以选择来添加"
+  echo  "         '假的' boot.img，让厨房的功能仍然可以"
+  echo  "         正常工作."
+  echo
+  echo  "         此 boot.img 会在你生成 ROM "
+  echo  "         ZIP 文件时自动删除."
+  echo
+  echo -n \
+        "添加 boot.img (y/n)? (默认: y): "
+
+  read add_it
+  echo
+
+  if [ "$add_it" != "n" ]
+  then
+    echo "复制空的 boot.img ..."
+    cp $kitchen_dir/tools/nullBoot.img $dest_dir/boot.img
+  else
+    echo "取消"
+  fi
+
+  cd $kitchen_dir
+  echo
+fi

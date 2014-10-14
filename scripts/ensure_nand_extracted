@@ -1,0 +1,86 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有一个可选参数:
+#
+# $1 = 如果设置 'no_clear' 当启动时不会清除
+#
+
+if [ "$1" == "" ]
+then
+  clear
+fi
+
+scripts/prompt_remove_boot_extracted
+
+if [ ! -d BOOT-EXTRACTED ]
+then
+
+  if [ ! -d WORKING_* ]
+  then
+    echo
+    echo "未发现 Working 文件夹，需要创建一个!"
+    exit 0
+  fi
+
+  cd WORKING_*
+
+  if [ -d system ]
+  then
+
+    if [ -d boot ]
+    then
+
+      if [ ! -e boot/initrd.gz ]
+      then
+        echo
+        echo "在 Working 文件夹中未发现 boot/initrd.gz!"
+        cd ..
+        exit 0
+      fi
+
+      if [ ! -e boot/zImage ]
+      then
+        echo
+        echo "在 Working 文件夹中未发现 boot/zImage!"
+        cd ..
+        exit 0
+      fi
+
+      echo "创建文件夹 'BOOT-EXTRACTED' ..."
+      mkdir ../BOOT-EXTRACTED
+
+      echo "复制 initrd.gz 和 zImage 到 BOOT-EXTRACTED"
+      cp boot/zImage ../BOOT-EXTRACTED/
+      cp boot/initrd.gz ../BOOT-EXTRACTED
+
+      echo "提取 ramdisk 内容 ..."
+      cd ../BOOT-EXTRACTED
+      mkdir boot.img-ramdisk
+      cd boot.img-ramdisk
+      gzip -d -c ../initrd.gz | cpio -i
+      cd ..
+      rm -f initrd.gz
+
+      cd ..
+
+    else
+      echo "错误: 未发现 boot 文件夹!"
+      echo
+      cd ..
+      exit 0
+    fi
+  else
+    echo "错误: Working 文件夹中未发现 system 文件夹!"
+    cd ..
+    exit 0
+  fi
+fi

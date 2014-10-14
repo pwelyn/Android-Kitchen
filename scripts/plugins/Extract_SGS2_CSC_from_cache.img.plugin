@@ -1,0 +1,158 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+echo
+echo "三星 Galaxy S2 CSC 提取器"
+echo "-------------------------------"
+echo
+echo "这个脚本将从官方三星 Galaxy S2固件的 cache.img 中提取 CSC （客户软件定制）。"
+echo "CSC是一个被称为'sec_csc.zip'的文件，其中包含位置和运营商特定的配置和软件。"
+echo
+
+echo -n "继续 (y/n)? (默认: y): "
+read do_csc
+echo
+
+if [ "$do_csc" == "n" ]
+then
+  exit 0
+fi
+
+date_str=`date '+%m%d%y_%H%M%S'`
+csc_dir=csc_$date_str
+
+echo
+echo "创建文件夹 `pwd`/$csc_dir ..."
+mkdir $csc_dir
+
+echo
+echo "---> 请放置官方的 cache.img 或 cache.img.ext4 到上面创建的文件夹 <--"
+
+scripts/press_enter
+
+cd $csc_dir
+
+if [ -e cache.img.ext4 ]
+then
+  mv -fv cache.img.ext4 cache.img
+fi
+
+if [ -e cache.img ]
+then
+
+  # Check if needs to be converted with simg2img
+  initial_bytes=`od -A n -h -j 0 -N 6 cache.img | sed 's/ //g'`
+
+  if [ "$initial_bytes" == "000000000000" ]
+  then
+    mv cache.img ext4_cache.img
+    cd ..
+
+  else
+
+    #
+    # Compile simg2img
+    #
+
+    simg2img_file=simg2img
+    if [ `uname | grep CYGWIN` ]
+    then
+      simg2img_file=$simg2img_file.exe
+    fi
+
+    echo
+
+    if [ -e ../tools/samsung_files/simg2img_files/$simg2img_file ]
+    then
+      echo "发现 $simg2img_file"
+      cd ..
+    else
+      echo "编译 simg2img ..."
+
+      cd ../tools/samsung_files/simg2img_files
+      gcc -c sparse_crc32.c
+      gcc sparse_crc32.o simg2img.c -w -o simg2img
+      rm *.o
+      cd ../../..
+
+      if [ -e tools/samsung_files/simg2img_files/$simg2img_file ]
+      then
+        echo "$simg2img_file 编译完成"
+      else
+        echo "错误: $simg2img_file 编译未完成!"
+        rm -rfv $csc_dir
+        exit 1
+      fi
+    fi
+
+    echo
+
+
+    #
+    # Convert to ext4
+    #
+
+    echo "解包 cache.img 到一种格式用于提解包..."
+    tools/samsung_files/simg2img_files/simg2img $csc_dir/cache.img \
+      $csc_dir/ext4_cache.img
+
+    if [ ! -e $csc_dir/ext4_cache.img ]
+    then
+      echo "不能解包 cache.img!"
+      exit 1
+    fi
+
+    rm -f $csc_dir/cache.img
+  fi
+
+  #
+  # Extract files from ext4_cache.img
+  #
+
+  if [ `uname | grep CYGWIN` ]
+  then
+    echo
+    echo "现在必须解包 sec_csc.zip."
+    scripts/press_enter
+    scripts/show_linux_reader $csc_dir ext4_cache.img
+  else
+    scripts/extract_ext3_img $csc_dir ext4_cache.img
+  fi
+
+  rm -f $csc_dir/ext4_cache.img 2>/dev/null
+  if [ "$?" == "1" ]
+  then
+    echo
+    echo "警告: ext4_cache.img 正在使用中.  当退出使用后再手动删除."
+    echo
+  fi
+
+  if [ ! -e $csc_dir/sec_csc.zip ]
+  then
+    echo "警告: 未发现 sec_csc.zip!"
+    exit 1
+  else
+    echo
+    echo "完成!  你的文件是在 $csc_dir/sec_csc.zip."
+    echo
+    echo "您可以解压缩这个文件，并复制'system'文件夹到您的ROM的"
+    echo "系统文件夹中的内容。"
+    echo
+    exit 0
+  fi
+
+else
+  echo "错误: 未发现 cache.img !"
+  echo
+  cd ..
+  echo "删除 $csc_dir folder"
+  rm -rf csc_dir
+  exit 1
+fi

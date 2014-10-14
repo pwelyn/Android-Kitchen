@@ -1,0 +1,105 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+temp=`ls WORKING_* 2>/dev/null`
+res=$?
+
+if [ "$res" == "2" ]
+then
+  echo "未发现 Working 文件夹!"
+  exit 0
+else
+  cd WORKING_*
+fi
+
+if [ ! -d META-INF/com/google/android ]
+then
+  echo "No META-INF/com/google/android folder found, creating it."
+  mkdir -p META-INF/com/google/android
+  echo
+fi
+
+cd META-INF/com/google/android
+
+
+if [ -e update-script ]
+then
+  echo "发现 update-script 脚本"
+  cd ../../../../..
+
+else
+
+  if [ -e updater-script ]
+  then
+
+    cd ../../../../..
+
+    echo
+    echo "======================================================="
+    echo
+    echo "发现一个 updater-script 脚本并不是 update-script 脚本"
+    echo "与厨房所使用的脚本不兼容"
+    echo "只有 update-script 脚本可以在厨房里使用"
+    echo "(请参阅详细解释 xda-developers.com 厨房的常见问题解答.)"
+    echo
+    echo "厨房将尝试转换你的 updater-script 成 update-script 格式"
+    echo "使用 update-script 的旧的（或类似）的语法, 这使得厨房更容易"
+    echo "的更改不同的设备. 当创建 ROM 包时, 它将会转换回去."
+    echo
+    echo "警告:"
+    echo "如果你使用一个定制的 ROM （ZIP）并非用厨房产生的，"
+    echo "那么这个转换可能不是100%正确.厨房将备份这个文件到"
+    echo "META-INF/com/google/android/updater-script.orig"
+    echo
+    echo "输入一个序号选项:"
+    echo
+    echo "  1 = 将它转换为 update-script (Amend 格式)"
+    echo "  2 = 不改变，保持该 updater-script (Edify 格式)"
+    echo
+    echo
+    echo -n "? (默认=1) "
+
+    read enter_option
+    if [ "$enter_option" != "2" ]
+    then
+      scripts/convert_updater_script no_help
+      scripts/fix_update_script
+    else
+      echo
+      echo "注意: 你可以创建或 de-odex 你的 ROM, 但是大部份选"
+      echo "项将不起作用. 你可在稍后从高级选项菜单中选择对 updater"
+      echo "-script 进行转换."
+      echo
+      exit 1
+    fi
+
+  else
+
+    cd ../../../../..
+
+    echo "无法找到 update-script 脚本，创建一个"
+    cd WORKING_*
+    cp ../tools/update_files/update-script META-INF/com/google/android/
+    cd ..
+    scripts/fix_update_script
+    scripts/fix_update_script_with_features
+
+    cd WORKING_*
+    bb=`find system -name busybox`
+    cd ..
+    if [ "$bb" != "" ]
+    then
+      scripts/add_busybox_to_update_script override
+    fi
+
+    echo
+  fi
+fi

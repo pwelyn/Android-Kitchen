@@ -1,0 +1,68 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#!/bin/bash
+
+version=$1
+
+while :
+do
+
+  clear
+
+  echo
+  echo "============================================================"
+  echo " Android Kitchen $version - by dsixda (xda-developers.com)"
+  echo "============================================================"
+  echo " Android Kitchen $version - by hwh132 越狱 汉化"
+  echo "============================================================"
+  echo
+  echo "> 传统选项"
+  echo
+  echo " 21 - 检测 update-script 脚本的错误"
+  echo " 22 - 添加 无线热点 功能"
+  echo " 23 - 添加 任务杀手 功能用于提升速度(仅限官方ROM)"
+  echo " 24 - 添加 Nano 文本编辑工具和 sysro/sysrw工具"
+  echo " 25 - 添加 Bash 命令解析工具(shell命令)"
+  echo " 26 - 添加 Apps2SD 功能"
+  echo " 27 - 添加 定制的开机动画 功能"
+  echo " 28 - 移植 工具箱 (测试功能)"
+  echo
+  echo " 99 - 从 Working 文件夹生成 ROM 刷机包"
+  echo "  0 - 返回到主菜单"
+  echo
+  echo -n "输入选项: "
+  read opt
+
+  if [ "$opt" != "0" ]
+  then
+    scripts/check_multiple_working
+  fi
+
+  if [ "$?" != "1" ]
+  then
+    case $opt in
+      21) scripts/verify_update_script; continue;;
+      22) scripts/add_tether;;
+      23) scripts/task_killer;;
+      24) scripts/add_nano show_help;;
+      25) scripts/add_bash show_help;;
+      26) scripts/add_apps2sd show_help;;
+      27) scripts/add_custom_boot_anim;;
+      28) scripts/porting_tools; continue;;
+      99) scripts/build_rom;;
+      0) exit 1;;
+      *) echo "错误选项"; continue;;
+    esac
+  fi
+
+  scripts/press_enter
+
+done

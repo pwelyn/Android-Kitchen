@@ -1,0 +1,168 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+if [ "$1" == "" ]; then
+	clear
+fi
+
+if [ ! -d WORKING_* ]; then
+	echo "未发现 Working 文件夹!"
+  scripts/press_enter
+  exit 0
+fi
+
+scripts/check_galaxy_s_and_s2
+sgs=$?
+
+
+echo
+echo "获取 ROOT 权限"
+echo "--------------------------------------------"
+echo
+echo "以下将获取 ROOT 权限:"
+echo
+echo "- 添加 Superuser 应用程序和 su 二进制文件"
+echo "- 将所需要的命令行添加到 update-script 脚本"
+
+if [ "$sgs" == "0" ]; then
+  echo "- 更新在 ramdisk 中的 default.prop"
+fi
+echo
+echo "--------------------------------------------"
+echo
+
+cd WORKING_*
+
+if [ ! -d system ]; then
+	echo "未发现 System 文件夹!"
+  cd ..
+  scripts/press_enter
+  exit 0
+fi
+
+if [ ! -e system/build.prop ]; then
+	echo "错误: 未发现 build.prop 文件"
+	cd ..
+	scripts/press_enter
+	exit 0
+fi
+
+SUEXISTS=`find system/bin -name su | wc -l`
+SUEXISTS=`expr $SUEXISTS + $(find system/xbin -name "su" | wc -l)`
+SUEXISTS=`expr $SUEXISTS + $(find system/app -iname "Superuser" | wc -l)`
+SUEXISTS=`expr $SUEXISTS + $(find system/app -iname "SuperSU" | wc -l)`
+SUEXISTS=`expr $SUEXISTS + $(find system/xbin -name "daemonsu" | wc -l)`
+SUEXISTS=`expr $SUEXISTS + $(find system/bin -iname ".su" | wc -l)`
+SUEXISTS=`expr $SUEXISTS + $(find system/etc -iname "99SuperSUDaemon" | wc -l)`
+
+if [ $SUEXISTS -gt 0 ]; then
+	echo "在 /system 文件夹中已包含了su二进制文件"
+	echo -n "是否覆盖(y/n)? (默认: n): "
+	read CHOICE
+	if [ "$CHOICE" != "y" ]; then
+		cd ..
+		exit 0
+	else
+		# Delete all known dependencies
+		for dep in 'system/xbin/daemonsu' 'system/bin/.ext/.su' 'system/bin/su' 'system/etc/init.d/99SuperSUDaemon'; do
+			rm -f $dep
+		done
+
+		echo
+		echo
+	fi
+fi
+
+
+echo "你想要安装哪个版本 Superuser 程序包?"
+echo
+
+echo " c - Chainfire  SuperSU"
+echo " k - Koush  Superuser"
+echo
+echo " x - 取消 ROOT 权限(默认)"
+echo
+
+echo -n "? "
+read CHOICE
+echo
+
+if [ "$CHOICE" == "c" ]; then
+	folder=chainfire
+elif [ "$CHOICE" == "k" ]; then
+	folder=koush
+else
+  echo "取消"
+  cd ../..
+  exit 1
+fi
+
+#
+# 检查cpu
+#
+
+if [ "$CHOICE" == "c" ]; then
+ARCH=$( grep ro.product.cpu.abi system/build.prop )
+
+# x86 needs to match: i486, i686, x86_64, ...
+if echo "$ARCH" | grep -q 86; then
+  PLATFORM=x86
+elif [ "$ARCH" = "mips" -o "$ARCH" = "mips64" ]; then
+  PLATFORM=mips
+else
+  PLATFORM=armeabi
+fi
+BIN=../tools/su_files/$folder/$PLATFORM
+COM=../tools/su_files/$folder/common
+	mkdir -p system/bin/.ext
+	mkdir -p system/etc/init.d
+cp $BIN/su system/xbin/daemonsu
+cp $BIN/su system/xbin/su
+cp $BIN/su system/bin/.ext/.su
+cp $COM/Superuser.apk system/app/Superuser.apk
+cp $COM/install-recovery.sh system/etc/install-recovery.sh
+cp $COM/99SuperSUDaemon system/etc/init.d/99SuperSUDaemon
+echo 1 > system/etc/.installed_su_daemon
+elif [ "$CHOICE" == "k" ]; then
+ARCH=$( grep ro.product.cpu.abi system/build.prop )
+
+# x86 needs to match: i486, i686, x86_64, ...
+if echo "$ARCH" | grep -q 86; then
+  PLATFORM=x86
+elif [ "$ARCH" = "mips" -o "$ARCH" = "mips64" ]; then
+  PLATFORM=mips
+else
+  PLATFORM=armeabi
+fi
+BIN=../tools/su_files/$folder/$PLATFORM
+cp $BIN/su system/xbin/su
+cp ../tools/su_files/$folder/Superuser.apk system/app/Superuser.apk
+  if [ ! -f "system/etc/.has_su_daemon" ]
+  then
+      cp ../tools/su_files/$folder/install-recovery.sh system/etc/install-recovery.sh
+      touch system/etc/.installed_su_daemon
+  fi
+fi
+cd ..
+
+echo
+scripts/add_su_to_update_script
+
+if [ "$sgs" == "0" ]; then
+	scripts/do_root_boot_img
+fi
+
+echo
+echo "ROOT 权限添加完成"
+echo
+
+scripts/press_enter
+	exit 0

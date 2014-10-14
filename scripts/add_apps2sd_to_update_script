@@ -1,0 +1,84 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+cd WORKING_*
+cd META-INF/com/google/android
+
+if [ -e update-script ]
+then
+
+  if [ "`grep -om 1 a2sd update-script`" == "a2sd" ]
+  then
+    echo "update-script 脚本中已含有 a2sd 内容"
+    cd ../../../../..
+    exit 0
+
+  else
+
+    echo
+    echo "更新 update-script 脚本中 apps2sd 内容 ..."
+
+    if [ `grep -c "copy_dir PACKAGE:data DATA:" update-script` == 0 ]
+    then
+
+      if [ `grep -c "format .*DATA:" update-script` == 0 ]
+      then
+        sed -i -e 's/format\(.*\)SYSTEM:[ ]*[\n]*/format\1SYSTEM:\n\ncopy_dir PACKAGE:data DATA:\n/' update-script
+      else
+        sed -i -e 's/format\(.*\)DATA:[ ]*[\n]*/format\1DATA:\n\ncopy_dir PACKAGE:data DATA:\n/' update-script
+      fi
+
+    fi
+
+    #
+    # 删除以前安装的 /data/app 到 /data/app 的符号链接
+    #
+    if [ `grep -c "delete DATA:app" update-script` == 0 ]
+    then
+      sed -i -e 's/copy_dir PACKAGE:data DATA:/delete DATA:app\ncopy_dir PACKAGE:data DATA:/' update-script
+    fi
+
+    # 插入特定模式的文件
+    cp ../../../../../tools/apps2sd_files/apps2sd_system .
+    sed -i -e '/etc\/init.goldfish.sh/r apps2sd_system' update-script
+    rm apps2sd_system
+
+    # 插入某行文件
+    cp ../../../../../tools/apps2sd_files/apps2sd_run_program .
+    line_num=`sed -n -e '/write_raw_image .*:boot.img BOOT:/{=;q}' update-script`
+
+    if [ "$line_num" != "" ]
+    then
+      line_num=$(($line_num-1))
+      sed -i -e ''$line_num' r apps2sd_run_program' update-script
+    else
+      echo "错误: 找不到 boot 分区中的 write_raw_image"
+    fi
+
+    rm apps2sd_run_program
+
+    if [ "`grep -om 1 a2sd update-script`" != "a2sd" ]
+    then
+      echo "错误: 无法更新 update-script 脚本中 a2sd 内容"
+      cd ../../../../..
+      exit 1
+    fi
+
+    cd ../../../../..
+    exit 0
+
+  fi
+
+else
+  echo "错误: 找不到 update-script 脚本"
+  cd ../../../../..
+  exit 1
+fi

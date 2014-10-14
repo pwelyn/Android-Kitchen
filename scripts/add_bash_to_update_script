@@ -1,0 +1,86 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+cd WORKING_*
+echo
+
+if [ -e META-INF/com/google/android/update-script ]
+then
+  #
+  # 删除现有的 bin/bash 预防冲突
+  #
+  echo "正在删除 update-script 脚本中关于 bin/bash 的命令 ..."
+  sed -i -e '/bin\/bash[ ]*$/d' META-INF/com/google/android/update-script
+  sed -i -e '/symlink.*\/bash .*/d' META-INF/com/google/android/update-script
+
+  #
+  # 这样做是为了防止在 ROM update-script 脚本中已经有二进制冲突
+  #
+  if [ -e system/xbin/bash ]
+  then
+    if [ "`find system/xbin -name bash`" == "" ]
+    then
+      echo "复制 system/bin/bash 到 system/xbin/bash"
+      cp -f system/bin/bash system/xbin/bash
+    fi
+  fi
+
+  echo "添加 bash 内容到 update-script 脚本"
+
+  cd META-INF/com/google/android
+
+  if [ `grep -c "set_perm_recursive.*SYSTEM:xbin[ ]*$" update-script` != 0 ]
+  then
+    sed -i -e 's/set_perm_recursive\(.*\)SYSTEM:xbin[ ]*$/set_perm_recursive\1SYSTEM:xbin\nset_perm 0 0 04755 SYSTEM:xbin\/bash\nsymlink \/system\/xbin\/bash SYSTEM:bin\/sh\n/' update-script
+
+  elif [ `grep -c "init.goldfish.sh" update-script` != 0 ]
+  then
+    sed -i -e 's/set_perm 0 2000 0550 SYSTEM:etc\/init.goldfish.sh/set_perm 0 2000 0550 SYSTEM:etc\/init.goldfish.sh\nset_perm 0 0 04755 SYSTEM:xbin\/bash\nsymlink \/system\/xbin\/bash SYSTEM:bin\/sh/g' update-script
+
+  elif [ `grep -c "write_raw_image .*:boot.img BOOT:" update-script` != 0 ]
+  then
+    sed -i -e 's/write_raw_image \(.*:boot.img\) BOOT:/set_perm 0 0 04755 SYSTEM:xbin\/bash\nsymlink \/system\/xbin\/bash SYSTEM:bin\/sh\nwrite_raw_image \1 BOOT:/' update-script
+
+  else
+    echo "set_perm 0 0 04755 SYSTEM:xbin/bash" >> update-script
+    echo "symlink /system/xbin/bash SYSTEM:bin/sh" >> update-script
+  fi
+
+  grep_bash=`grep -c xbin/bash update-script`
+  cd ../../../..
+
+  if [ $grep_bash != 2 ]
+  then
+    echo "错误: 无法在 update-script 脚本添加 bash 内容"
+
+  else
+
+    #
+    # 确保 update-script 脚本它是 symlinked 时不会导致冲突与'sh'
+    #
+    sh0_path=`find . -name sh0`
+    if [ "$sh0_path" == "" ]
+    then
+      if [ -e system/bin/sh ]
+      then
+        echo "由于要添加的 bash 的符号链接，所以移开 /system/bin/sh"
+        mv system/bin/sh system/bin/sh0
+      fi
+    fi
+  fi
+
+else
+  echo "错误: 未发现 update-script 脚本"
+fi
+
+cd ..
+
+scripts/fix_update_script_blanks

@@ -1,0 +1,40 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+
+if [ ! -d WORKING_* ]
+then
+  echo "未发现 Working 文件夹!"
+  exit 0
+fi
+
+if [ -d BOOT-EXTRACTED ]
+then
+  echo
+  echo "---------------------------------------------------------------"
+  echo
+  echo "请确认 BOOT-EXTRACTED 文件夹拥有需要的 kernel 和 ramdisk 文件。"
+  echo
+  echo "Kernel  = zImage (有时被称为 boot.img-kernel)"
+  echo "Ramdisk = boot.img-ramdisk 文件夹"
+  echo
+  echo "---------------------------------------------------------------"
+  echo
+  echo "这些文件将会重新打包进 boot.img ，再复制到目前工作文件夹。"
+  echo
+  echo "---------------------------------------------------------------"
+  echo
+  echo -n "<请按回车键> "
+  read enterKey
+fi
+
+

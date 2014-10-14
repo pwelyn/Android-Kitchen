@@ -1,0 +1,167 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+# $1 = "for_build"
+# $2 = yes/no (忽略提示) - 目前依赖 $1 , 默认=yes
+#
+
+
+if [ "$1" != "for_build" ]
+then
+  clear
+  echo
+
+  if [ -d WORKING_* ]
+  then
+    echo "发现 Working 文件夹"
+  else
+    echo "未发现 Working 文件夹!"
+    exit 1
+  fi
+fi
+
+if [ `uname | grep CYGWIN` ]
+then
+  zipalign_file=zipalign.exe
+
+elif [ `uname | grep Linux` ]
+then
+  zipalign_file=zipalign
+
+elif [ `sw_vers | grep -o Mac` ]
+then
+  zipalign_file=zipalign.mac
+
+else
+  echo "错误: 未检测到 OS 操作系统，无法使用 zipalign"
+  exit 1
+fi
+
+
+return_val=0
+
+if [ "$1" == "for_build" ]
+then
+
+  if [ "$2" == "no" ]
+  then
+    echo
+    echo -n "是否对 APK 文件进行 Zipalign 优化(y/n)? (默认: y): "
+    read do_zipalign
+  fi
+
+else
+  clear
+
+  echo
+  echo "---------------------------------------------------------------"
+  echo
+  echo "Zipalign 将优化 Working 文件夹下的所有 *.apk 程序，"
+  echo "以更好地利用你的 RAM 内存."
+  echo
+  echo "注意: 此操作将会对所有 *.apk 文件进行 Zipalign 操作，创建 ROM 时同样"
+  echo "会提供此操作选项，现在并不是必须进行。"
+  echo
+  echo "-------------------------------------------------------------------"
+  echo
+
+  echo -n "继续 Zipalign (y/n)? (默认: y): "
+  read do_zipalign
+fi
+
+
+if [ "$do_zipalign" == "n" ]
+then
+  exit 0
+fi
+
+
+echo
+cd WORKING_*
+
+grep_cmd=`find . -type f | grep \\.apk$ | sort -f`
+
+name1=
+
+for filename in $grep_cmd
+do
+
+  #
+  # 处理文件名称中的空格
+  #
+  if [ "`echo $filename | grep .apk$`" == "" ]
+  then
+
+    if [ "$name1" == "" ]
+    then
+      name1=$filename
+    else
+      name1="$name1 $filename"
+    fi
+
+    continue
+
+  elif [ "$name1" != "" ]
+  then
+
+    # 暂时用下划线替换空格
+    name2=$filename
+    original_name="$name1 $name2"
+    filename=`echo $original_name | tr ' ' '_'`
+    mv "$name1 $name2" $filename
+    found_space=yes
+    echo "Zipaligning $original_name ..."
+
+  else
+    found_space=no
+    echo "Zipaligning $filename ..."
+  fi
+
+  new_file=$filename\_new
+  ../tools/zipalign_files/$zipalign_file 4 $filename $new_file
+
+  if [ -e $new_file ]
+  then
+
+    if [ "$found_space" == "yes" ]
+    then
+      mv -f $new_file "$name1 $name2"
+      rm -f $filename
+
+    else
+      mv -f $new_file $filename
+    fi
+
+  else
+
+    return_val=1
+    echo "错误: 无法 Zipalign，正在终止"
+    if [ `uname | grep Linux` ]
+    then
+      echo "如果你使用的 64 位 Linux，确保您安装包 ia32 库"
+    fi
+    break
+  fi
+
+  name1=
+
+done
+
+cd ..
+echo
+
+if [ "$return_val" == "0" ]
+then
+  echo "zipaligning 已完成"
+fi
+
+exit $return_val

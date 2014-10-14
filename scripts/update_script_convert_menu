@@ -1,0 +1,99 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+clear
+if [ ! -d WORKING_* ]
+then
+  echo "未发现 Working 文件夹!"
+  scripts/press_enter
+  exit 0
+fi
+
+
+while :
+do
+
+  clear
+
+  echo
+  echo "转换 update-script/updater-script"
+  echo "--------------------------------------"
+  echo
+  echo "您应该知道:"
+  echo "- update-script 刷机脚本是 'Amend' 格式"
+  echo "- updater-script 刷机脚本是 'Edify' 格式"
+  echo
+
+  default_choice=""
+
+  cd WORKING_*
+  if [ -e META-INF/com/google/android/updater-script ]
+  then
+    echo "你当前有:"
+    echo "META-INF/com/google/android/updater-script"
+    echo
+    default_choice=1
+  elif [ -e META-INF/com/google/android/update-script ]
+  then
+    echo "你当前有:"
+    echo "META-INF/com/google/android/update-script"
+    echo
+    default_choice=2
+  else
+    echo "目前还没有任何一个文件在您的 Working 文件夹."
+  fi
+
+  cd ..
+
+  echo
+  echo "请输入选项:"
+  echo
+
+  echo "  1 = 转换 updater-script 为 update-script (Amend)"
+  echo "  2 = 转换 update-script 为 updater-script (Edify)"
+  echo "  0 = 退出"
+  echo
+
+  if [ "$default_choice" == "" ]
+  then
+    echo -n "? "
+  else
+    echo -n "(默认: $default_choice)? "
+  fi
+
+  read enterNumber
+
+  if [ "$enterNumber" != "0" ] &&  [ "$enterNumber" != "1" ] &&  [ "$enterNumber" != "2" ]
+  then
+    if [ "$default_choice" == "" ]
+    then
+      echo "无效选项"
+      continue
+    else
+      enterNumber=$default_choice
+    fi
+  fi
+
+  if [ "$enterNumber" == "1" ]
+  then
+    scripts/convert_updater_script
+  elif [ "$enterNumber" == "2" ]
+  then
+    scripts/convert_update_script
+  elif [ "$enterNumber" == "0" ]
+  then
+    exit 0
+  fi
+
+  scripts/press_enter
+  exit 0
+
+done

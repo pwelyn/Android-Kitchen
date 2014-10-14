@@ -1,0 +1,74 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+echo
+echo "批处理 De-odexer"
+echo "---------------"
+echo
+echo "这个脚本将抓取在original_update文件夹下的所有ROM包,"
+echo "de-odex 他们, 同时将这些 Working 文件夹移动到一个新的文件夹."
+echo
+
+echo -n "继续 (y/n)? (默认: y): "
+read do_batch
+echo
+
+if [ "$do_batch" == "n" ]
+then
+  exit 0
+fi
+
+echo "---> 请放置 ROM 包到 original_update 文件夹 <--"
+
+scripts/press_enter
+grep_files=`scripts/grep_roms`
+
+if [ "$grep_files" != "" ]
+then
+
+  scripts/make_backup_working
+
+  date_str=`date '+%m%d%y_%H%M%S'`
+  done_dir="batch_$date_str"
+
+  echo
+  echo "创建文件夹 $done_dir"
+  echo
+  mkdir $done_dir
+
+  for filename in $grep_files
+  do
+
+    filename=`echo $filename | sed -e 's/\.\///g'`
+
+    echo
+    echo "================================================================================="
+    echo
+    scripts/choose_rom name_given $filename
+    scripts/do_deodex_folder "framework app" y
+
+    echo
+    echo "移动 Workign 文件夹 ..."
+    mv -v WORKING_* $done_dir/WORKING_$filename
+    echo
+
+  done
+
+  echo
+  echo "================================================================================="
+  echo
+  echo "完成!"
+  echo
+  echo "$done_dir 是已经完成"
+  echo
+
+else
+  echo "错误: 未发现 ROM 包!"
+fi

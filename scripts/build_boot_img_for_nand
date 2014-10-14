@@ -1,0 +1,36 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+model=`scripts/get_product_model`
+
+echo
+echo "ro.product.model=$model"
+echo
+
+if [ "$model" == "HTC HD2" ]
+then
+  kernel_offset=2048
+  kernel_base=0x11800000
+  cmd_line="no_console_suspend=0"
+
+else
+  echo "警告： $model 在厨房中未定义，请使用默认值!"
+  kernel_offset=2048
+  kernel_base=0x11800000
+  cmd_line="no_console_suspend=0"
+fi
+
+echo "Hard-coding:"
+echo "- kernel 在 boot.img 中的偏移量 = $kernel_offset"
+echo "- kernel base 地址       = $kernel_base"
+echo "- 命令行参数              = $cmd_line"
+
+scripts/build_boot_img $kernel_offset $kernel_base $cmd_line

@@ -1,0 +1,61 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+chmod 755 tools/extract_boot_files/extract-*.pl
+chmod 755 tools/mkboot/*
+chmod 755 tools/unyaffs_files/*
+chmod 755 tools/zipalign_files/*
+chmod 755 tools/samsung_files/unpack-initramfs
+chmod 755 scripts/plugins/*
+chmod 755 tools/deodex_files/api_level.txt
+rm -f symlinks.log
+rm -f tools/explore2fs_windows/explore*.txt
+rm -f tools/ext2read_windows/ext2*.log
+rm -f ext2*.log
+rm -f sh.exe.stackdump
+rm -f scripts/.DS_Store
+rm -f tools/.DS_Store
+rm -f original_update/.DS_Store
+rm -f .DS_Store
+rm -f unzip.log
+
+bin_list=( mkbootfs mkbootfs.exe mkbootimg mkbootimg.exe rsa.o sha.o )
+
+for mkboot_bin in ${bin_list[@]}
+do
+  if [ -e tools/mkboot/$mkboot_bin ]
+  then
+    rm tools/mkboot/$mkboot_bin
+  fi
+done
+
+
+bin_list=( unyaffs unyaffs.exe )
+
+for unyaffs_bin in ${bin_list[@]}
+do
+  if [ -e tools/unyaffs_files/$unyaffs_bin ]
+  then
+    rm tools/unyaffs_files/$unyaffs_bin
+  fi
+done
+
+
+bin_list=( simg2img simg2img.exe sparse_crc32.o )
+
+for simg_bin in ${bin_list[@]}
+do
+  if [ -e tools/samsung_files/simg2img_files/$simg_bin ]
+  then
+    rm tools/samsung_files/simg2img_files/$simg_bin
+  fi
+done
+

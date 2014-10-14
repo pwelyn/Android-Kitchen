@@ -1,0 +1,241 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+#
+# 首先检查 xbin 文件夹和 BusyBox
+#
+
+cd WORKING_*
+
+if [ -d system/xbin ]
+then
+
+  # 不要进入 system/xbin 的所有方式, 因为一些二进制文件
+  # 有可能发生冲突与你的系统文件操作命令
+  # (例如： ls, rm)!
+  cd system
+
+  echo
+  echo "正在 Working 文件夹下的 system/xbin 查找符号链接 ..."
+
+  symlinks=`find xbin -type l -exec ls -l {} \; | sed 's/.* xbin\/\([^ ]*\).*/\1/g'`
+  source_files=`find xbin -type l -exec ls -l {} \; | sed 's/.*-> //g'`
+  symlinks=( $symlinks )
+  source_files=( $source_files )
+
+  if [ "$symlinks" == "" ]
+  then
+    echo "未检测到任何"
+  else
+    echo -n "它们将会添加到 update-script 脚本并且从 system/xbin 删除"
+
+    for (( i=0 ; i < ${#symlinks[@]} ; i++ ))
+    do
+
+      echo -n "."
+
+      link=${symlinks[$i]}
+      src=${source_files[$i]}
+
+      # 删除符号链接
+      rm -f xbin/$link
+
+      #
+      #  删除一些二进制文件的完整路径
+      #
+      if [ `echo $src | grep -c /busybox$` == 1 ]
+      then
+        # 添加 busybox 安装命令到 ROM 的 update-script 脚本中以替换好多的符号链接
+        # 见下文
+        continue
+      elif [ `echo $src | grep -c /toolbox$` == 1 ]
+      then
+        src=toolbox
+      elif [ `echo $src | grep -c /dumpstate$` == 1 ]
+      then
+        src=dumpstate
+      elif [ `echo $src | grep -c /iwmulticall$` == 1 ]
+      then
+        src=iwmulticall
+      fi
+
+      export XLINK=$link
+      export XSRC=$src
+
+      perl -pi -e 's/set_perm_recursive 0 0 0755 0644 SYSTEM:[ ]*$/symlink $ENV{"XSRC"} SYSTEM:xbin\/$ENV{"XLINK"}\nset_perm_recursive 0 0 0755 0644 SYSTEM:/' ../META-INF/com/google/android/update-script 
+    done
+
+    echo
+
+  fi
+
+  #
+  # 检查 BusyBox
+  #
+  if [ -e xbin/busybox ] && [ "`echo ${source_files[*]} | grep -c busybox`" != "0" ]
+  then
+    cd ../..
+    scripts/add_busybox_to_update_script override
+  else
+    cd ../..
+  fi
+
+else
+  cd ..
+  echo
+fi
+
+
+#
+# 检查 root 权限
+#
+
+cd WORKING_*
+su_path=`find . -name su`
+cd ..
+
+if [ "$su_path" != "" ]
+then
+  echo
+  echo "发现 $su_path"
+  scripts/add_su_to_update_script
+fi
+
+
+#
+# 检查 /data/app
+#
+
+cd WORKING_*
+
+if [ -d data/app ]
+then
+
+  cd ..
+  echo
+  echo "在 Working 文件夹中发现 data/app"
+  scripts/add_data_app_to_update_script
+
+else
+  cd ..
+fi
+
+
+
+#
+# Check for /preload symlinks (Galaxy S2)
+#
+
+cd WORKING_*
+
+if [ -d preload/symlink/system/app ]
+then
+
+  cd ..
+  echo
+  echo "在 Working 文件夹下发现 /preload/symlink/system/app "
+  scripts/add_preload_symlinks_to_update_script
+
+else
+  cd ..
+fi
+
+
+
+#
+# Check for /data/local
+#
+
+cd WORKING_*
+
+if [ -d data/local ]
+then
+
+  cd ..
+  echo
+  echo "在 Working 文件夹中发现 data/local"
+  scripts/add_data_local_to_update_script
+
+else
+  cd ..
+fi
+
+
+
+#
+# 检查 nano
+#
+
+cd WORKING_*
+nano_path=`find . -type f -name nano`
+cd ..
+
+if [ "$nano_path" != "" ]
+then
+  echo
+  echo "发现 $nano_path"
+  scripts/add_nano_to_update_script
+fi
+
+
+
+#
+# 检查 sysrw/sysro
+#
+
+cd WORKING_*
+sysrw_path=`find . -name sysrw`
+cd ..
+
+if [ "$sysrw_path" != "" ]
+then
+  echo
+  echo "发现 $sysrw_path"
+  scripts/add_sysrorw_to_update_script
+fi
+
+
+
+#
+# 检查 apps2sd
+#
+
+scripts/a2sd_exists
+
+if [ "$?" == "1" ]
+then
+  echo
+  echo "检测到 apps2sd"
+  scripts/add_apps2sd_files
+  scripts/add_apps2sd_to_update_script
+fi
+
+echo
+
+
+
+#
+# 检查 bash (检查apps2sd后，因为它将添加 bash)
+#
+
+cd WORKING_*
+bash_path=`find . -name bash`
+cd ..
+
+if [ "$bash_path" != "" ]
+then
+  echo
+  echo "发现 $bash_path"
+  scripts/add_bash_to_update_script
+fi
+
+
+scripts/fix_update_script_blanks

@@ -1,0 +1,29 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = file name (cache.img/cache.rfs/cache.img.ext4/etc.)
+#
+
+
+if [ "$1" == "" ]
+then
+  cache_file=cache.img
+else
+  cache_file=$1
+fi
+
+echo
+echo "警告: 没有发现 $cache_file.  你可以单独解开此文件"
+echo "通过运行插件脚本在厨房里的高级菜单选项."
+echo "如果您的设备不使用 CSC，只是忽略此消息."
+echo

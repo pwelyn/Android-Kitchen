@@ -1,0 +1,79 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有一个可选参数:
+#
+# $1 = 文件夹包含 boot.img
+#
+
+
+base_dir=`pwd`
+
+if [ "$1" == "" ]
+then
+  if [ ! -d WORKING_* ]
+  then
+    echo "未发现 Working 文件夹!"
+    exit 0
+  fi
+
+  cd WORKING_*
+  working_folder=`pwd`
+
+else
+  cd $1
+  working_folder=`pwd`
+fi
+
+
+echo
+
+if [ -e boot.img ]
+then
+
+  cd $base_dir
+  dec_offset=`scripts/get_boot_img_page_size $working_folder`
+
+  if [ "$dec_offset" != "" ]
+  then
+
+    if [ "$dec_offset" == "0" ]
+    then
+      echo "错误: kernel偏移量（页面大小）为 0"
+      exit 1
+    fi
+
+    echo "Kernel 在 boot.img 中的 $dec_offset 偏移处发现"
+
+    # Check for MT65XX
+    scripts/check_mt65xx_bootimg $working_folder $dec_offset
+    mt65xx=$?
+
+    if [ "$mt65xx" == "1" ]
+    then
+      type=mt65xx
+    else
+      type=""
+    fi
+
+    scripts/set_kernel_offset_files $dec_offset $type
+    exit $?
+
+  else
+    echo "错误: 在 boot.img 中未发现 Kernel 偏移(页面大小)!"
+    exit 1
+  fi
+
+else
+  echo "未发现 boot.img!"
+  cd $base_dir
+  exit 1
+fi

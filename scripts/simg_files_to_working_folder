@@ -1,0 +1,315 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本拥有两个可选参数:
+#
+# $1 = "no_create" 或 "create" 或 "create_working"
+#         - 如果工作文件夹已经存在，必须指定 no_create
+# $2 = "kernel_only" 或 "name_given" - 如果已经指定则 $1 是强制的
+#
+
+if [ "$1" == "no_create" ]
+then
+  build_dir=`ls | grep -m 1 ^WORKING_`
+
+  if [ ! -e $build_dir/factoryfs.img ]
+  then
+    echo "错误: 未发现 $build_dir/factoryfs.img!"
+    exit 1
+  fi
+
+  mkdir $build_dir/system
+  mv $build_dir/factoryfs.img $build_dir/system
+
+  if [ -e $build_dir/cache.img ]
+  then
+    mv $build_dir/cache.img $build_dir/system
+  else
+    scripts/show_cache_warning cache.img
+  fi
+
+  # Sometimes images have zero permissions set when extracted from TAR archive,
+  # making them unreadable!
+  chmod -R 777 $build_dir
+
+else
+
+  #
+  # 检查 factoryfs.img, hidden.img, cache.img 和 zImage 在 original_update
+  #
+  if [ -e original_update/factoryfs.img ]
+  then
+    echo "发现 original_update/factoryfs.img"
+
+    if [ -e original_update/hidden.img ]
+    then
+      echo "Found original_update/hidden.img"
+    fi
+
+    if [ -e original_update/cache.img ]
+    then
+      echo "发现 original_update/cache.img"
+    else
+      scripts/show_cache_warning original_update/cache.img
+    fi
+
+  else
+    echo
+      echo "错误: 在 original_update 文件夹下未发现 factoryfs.img 文件!"
+    exit 1
+  fi
+
+  if [ -e original_update/zImage ]
+  then
+    echo "发现 original_update/zImage"
+    scripts/show_rooted_kernel_msg
+  else
+    echo
+    echo "警告: 未发现 original_update/zImage"
+  fi
+
+
+  #
+  # 工作文件夹名称
+  #
+  build_dir=`scripts/set_working_folder_name $2`
+
+  echo
+  echo "创建 Working 文件夹 $build_dir ..."
+  mkdir $build_dir
+  mkdir $build_dir/system
+
+  #内核可选
+  if [ -e original_update/zImage ]
+  then
+    echo "复制 zImage ..."
+    cp original_update/zImage $build_dir
+  fi
+
+fi
+
+echo
+
+
+#
+# 编译 sigm2img
+#
+
+scripts/compile_simg2img
+if [ "$?" == "1" ]
+then
+  exit 1
+fi
+
+
+
+if [ "$1" == "no_create" ]
+then
+  src_dir=$build_dir/system
+  hidden_dir=$build_dir
+else
+  src_dir=original_update
+  hidden_dir=$src_dir
+fi
+
+system_dir=$build_dir/system
+cd $system_dir
+
+# Get full path
+system_dir=`pwd`
+cd ../..
+
+
+#
+# 转换 factoryfs.img 为 ext4
+#
+
+echo
+echo "转换 factoryfs.img 为可解包的格式 ..."
+tools/samsung_files/simg2img_files/simg2img $src_dir/factoryfs.img \
+  $system_dir/ext4_factoryfs.img
+
+if [ ! -e $system_dir/ext4_factoryfs.img ]
+then
+  echo "无法转换 factoryfs.img!"
+  exit 1
+fi
+
+rm -rf $system_dir/factoryfs.img
+
+
+
+#
+# 目录树
+#
+
+mkdir -p $build_dir/META-INF/com/google/android
+echo
+echo "正在添加 update-script 脚本 ..."
+cp tools/update_files/update-script $build_dir/META-INF/com/google/android/
+
+
+
+#
+# 从 ext4_factoryfs.img 提取文件
+#
+
+if [ `uname | grep CYGWIN` ]
+then
+  scripts/show_ext2explore $system_dir ext4_factoryfs.img
+else
+  scripts/extract_ext3_img $system_dir ext4_factoryfs.img
+fi
+
+cd $system_dir
+
+rm -f ext4_factoryfs.img 2>/dev/null
+if [ "$?" == "1" ]
+then
+  echo
+  echo "警告: ext4_factoryfs.img 正在使用中，请在应用程序关闭后手动删除文件。"
+  echo
+fi
+
+cd ..
+
+if [ ! -d system ]
+then
+  echo
+  echo "错误:  未发现 /system 文件夹!"
+  exit 1
+fi
+
+if [ ! -d system/framework ]
+then
+  echo
+  echo "错误: 未发现 /system/framework 文件夹!"
+  exit 1
+fi
+
+if [ ! -d system/app ]
+then
+  echo
+  echo "错误: 未发现 /system/app 文件夹!"
+  exit 1
+fi
+
+if [ "`ls system`" == "" ]
+then
+  echo
+  echo "错误: /system 文件夹是空的!"
+  echo
+  exit 1
+fi
+
+
+cd ..
+
+echo
+echo "ext4_factoryfs.img 已经完全解包到:"
+echo "  $system_dir"
+
+
+
+base_dir=`pwd`
+
+
+# Check for /preload
+scripts/check_preload_symlinks $base_dir $system_dir $hidden_dir hidden.img
+
+
+
+# Check for CSC
+if [ -e $src_dir/cache.img ]
+then
+  echo
+  echo "是否愿意解压 cache.img 中的 客户软件定制(CSC)(y/n)?"
+  echo -n "从 cache.img 提取(y/n)? (default: y): "
+
+  read do_extract
+  echo
+
+  if [ "$do_extract" == "n" ]
+  then
+    rm -vf $src_dir/cache.img
+    echo
+  else
+
+    #
+    # 转换 cache.img 为 ext4
+    #
+    echo "转换 cache.img 为可解包的格式 ..."
+    tools/samsung_files/simg2img_files/simg2img $src_dir/cache.img \
+      $system_dir/ext4_cache.img
+
+    if [ ! -e $system_dir/ext4_cache.img ]
+    then
+      echo "无法解包 cache.img!"
+      exit 1
+    fi
+
+    rm -rf $system_dir/cache.img
+
+
+    #
+    # 从 ext4_cache.img 提取文件
+    #
+    if [ `uname | grep CYGWIN` ]
+    then
+      scripts/show_linux_reader $system_dir ext4_cache.img
+    else
+      scripts/extract_ext3_img $system_dir ext4_cache.img
+    fi
+
+    cd $system_dir
+
+    rm -f ext4_cache.img 2>/dev/null
+    if [ "$?" == "1" ]
+    then
+      echo
+      echo "警告: ext4_cache.img 正在使用中，请在应用程序关闭后手动删除文件。"
+      echo
+    fi
+
+    cd ../..
+    scripts/unzip_csc $build_dir
+  fi
+fi
+
+
+
+#
+# 插入假的 boot.img
+#
+scripts/check_no_bootimg
+
+
+#
+# 更新 update-script 脚本和其他调整
+#
+if [ "$2" != "kernel_only" ] && [ "$2" != "name_given" ]
+then
+  scripts/fix_update_script
+
+  # 更新 update-script 脚本与修改 Nandroid 备份功能
+  scripts/fix_update_script_with_features
+
+  scripts/remove_recovery
+fi
+
+
+echo
+echo "$build_dir 列表:"
+echo
+ls -l $build_dir
+
+echo
+echo " Working 文件夹设置完成!"

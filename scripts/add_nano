@@ -1,0 +1,166 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+clear
+
+echo
+echo "----------------------------------------------------------------"
+echo
+echo "Nano是一个能够在电脑的ADB终端或超级终端（例如ConnectBot）中运行"
+echo "的文本编辑器，打开它需要在终端中输入: nano"
+echo
+echo "sysrw 和 sysro 脚本能够使设备轻松挂载 /system 文件夹（读写或只读）"
+echo "用于编辑系统文件"
+echo
+echo "----------------------------------------------------------------"
+echo
+
+echo -n "继续并安装 (y/n)? (默认: y): "
+read do_install
+
+if [ "$do_install" == "n" ]
+then
+  exit 0
+fi
+
+echo
+
+scripts/add_busybox no_clear
+res=$?
+
+if [ "$res" == "1" ]
+then
+  exit 0
+fi
+
+
+#
+# sysro/sysrw 需要 busybox 挂载
+# 常规 'mount' 不一定适合所有设备
+#
+
+scripts/convert_to_unix tools/nano_files/sysrw
+scripts/convert_to_unix tools/nano_files/sysro
+
+cd WORKING_*
+echo
+
+sys_path=`find . -name sysrw`
+if [ "$sys_path" == "" ]
+then
+  cp -fv ../tools/nano_files/sysrw system/xbin/
+else
+  echo "发现 $sys_path"
+fi
+
+sys_path=`find . -name sysro`
+if [ "$sys_path" == "" ]
+then
+  cp -fv ../tools/nano_files/sysro system/xbin/
+else
+  echo "发现 $sys_path"
+fi
+
+cd ..
+echo
+scripts/add_sysrorw_to_update_script
+
+
+scripts/check_galaxy_s_and_s2
+
+if [ "$?" == "1" ]
+then
+  echo
+  echo "此 ROM 不支持厨房的 Nano 功能"
+
+else
+  scripts/ensure_boot_extracted
+
+  if [ -d BOOT-EXTRACTED ]
+  then
+    if [ -d WORKING_* ]
+    then
+
+      if [ -d BOOT-EXTRACTED/boot.img-ramdisk ]
+      then
+        cd BOOT-EXTRACTED/boot.img-ramdisk
+      else
+        echo "错误: 未发现 BOOT-EXTRACTED/boot.img-ramdisk 文件夹!"
+        exit 0
+      fi
+
+    else
+      exit 0
+    fi
+  else
+    exit 0
+  fi
+
+  echo
+
+  if [ `grep -c TERMINFO init.rc` == 1 ]
+  then
+    echo "TERMINFO 已存在 init.rc 中"
+    cd ../..
+    rm -rf BOOT-EXTRACTED
+
+  else
+    echo "设置 TERMINFO 在 init.rc 中 ..."
+    perl -pi -e 's/    export PATH /    export TERMINFO \/system\/etc\/terminfo\n    export PATH /g' init.rc
+
+    if [ -e init.rc.bak ]
+    then
+      rm -f init.rc.bak
+    fi
+
+    if [ "`grep TERMINFO init.rc`" == "" ]
+    then
+      echo "错误: 无法更新 init.rc!"
+      cd ../..
+      rm -rf BOOT-EXTRACTED
+      exit 0
+    fi
+
+    cd ../..
+    scripts/build_boot_img
+
+    echo
+    echo "添加 /system/etc/terminfo ..."
+    echo
+
+    cd WORKING_*
+    mkdir -p system/etc/terminfo
+    cp ../tools/nano_files/terminfo.zip system/etc/terminfo/
+    cd system/etc/terminfo
+    unzip terminfo.zip
+    rm terminfo.zip
+    cd ../../../..
+  fi
+
+  echo
+
+  scripts/nano_exists
+  res=$?
+
+  if [ "$res" == "0" ]
+  then
+    cd WORKING_*
+    cp -fv ../tools/nano_files/nano system/xbin/
+    cd ..
+  else
+    echo "发现 nano 二进制文件"
+  fi
+
+  scripts/add_nano_to_update_script
+
+fi
+
+scripts/fix_update_script_blanks

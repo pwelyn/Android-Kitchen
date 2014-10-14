@@ -1,0 +1,31 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+cd WORKING_*
+
+if [ -e system/vendor/firmware/wlan/prima/WCNSS_cfg.dat ]
+then
+
+  if [ `grep -c WCNSS_qcom_cfg.ini META-INF/com/google/android/update-script` == 0 ] && \
+      [ `grep -c WCNSS_qcom_wlan_nv.bin META-INF/com/google/android/update-script` == 0 ] 
+  then
+    echo "添加 Prima WLAN drivers 符号链接 ..."
+
+    rm -f system/vendor/firmware/wlan/prima/WCNSS_qcom_cfg.ini
+    rm -f system/vendor/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin
+
+    sed -i \
+      -e 's/\(set_perm_recursive 0 0 0755 0644 SYSTEM:[ ]*$\)/symlink \/data\/misc\/wifi\/WCNSS_qcom_cfg.ini SYSTEM:vendor\/firmware\/wlan\/prima\/WCNSS_qcom_cfg.ini\n\1/g' \
+      -e 's/\(set_perm_recursive 0 0 0755 0644 SYSTEM:[ ]*$\)/symlink \/data\/misc\/wifi\/WCNSS_qcom_wlan_nv.bin SYSTEM:vendor\/firmware\/wlan\/prima\/WCNSS_qcom_wlan_nv.bin\n\1/g' \
+    META-INF/com/google/android/update-script
+  fi
+fi
+
+cd ..

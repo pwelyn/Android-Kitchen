@@ -1,0 +1,58 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+
+scripts/prompt_remove_boot_extracted
+mkdir BOOT-EXTRACTED
+
+cd WORKING_*
+cd BOOT
+mv RAMDISK ../../BOOT-EXTRACTED/boot.img-ramdisk
+mv kernel ../../BOOT-EXTRACTED/zImage
+
+base_offset=`cat base | sed -e 's/\(0x[0-9]*\)/\1/g'`
+cmd_line=`cat cmdline | sed -e 's/\(.*\)/\1/g'`
+
+cd ..
+rm -rf BOOT
+mv SYSTEM ../system.temp
+rm -rf *
+mv ../system.temp system
+cd ..
+
+platform=`scripts/get_build_prop_val ro.board.platform`
+
+if [ "$platform" == "qsd8k" ]
+then
+  kernel_offset=2048
+
+elif [ "$platform" == "msm8660" ] || [ "$platform" == "s5pc110" ] || \
+      [ "$platform" == "msm7x30" ]
+then
+  kernel_offset=4096
+
+else
+  echo
+  echo "无法确定kernel在boot.img中的偏移值（也就是页面大小）"
+  echo "如果您不打算刷入这个boot.img ,请使用默认值。"
+  echo
+  echo -n "请输入页面大小（默认=4096）: "
+  read kernel_offset
+  echo
+
+  if [ "$kernel_offset" == "" ]
+  then
+    kernel_offset=4096
+  fi
+
+fi
+
+scripts/build_boot_img $kernel_offset $base_offset $cmd_line

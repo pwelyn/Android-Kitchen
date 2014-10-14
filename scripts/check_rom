@@ -1,0 +1,144 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = "no_info"      - 移植或提取kernel时指定
+# $2 = "kernel_only"  - 如果已经指定好的，则 $1 是强制性
+#
+
+echo
+echo "为 ROM 创建 Working 文件夹"
+echo "=============================="
+echo
+echo "确保至少有一个 ROM 包在 'original_update' 文件夹下!"
+echo
+echo "选择一个选项:"
+echo
+echo " s - 显示支持的格式"
+echo " x - 退出，不创建 Working 文件夹"
+echo ""
+echo "或按回车继续"
+echo
+echo -n "? "
+read proceed
+
+if [ "$proceed" == "x" ]
+then
+  echo
+  echo "取消"
+  exit 1
+
+elif [ "$proceed" == "s" ]
+then
+
+  more tools/formats.txt
+
+  echo
+  echo -n "按回车键继续, 或选择 'x' 退出: "
+  read proceed
+
+  if [ "$proceed" == "x" ]
+  then
+    exit 1
+  fi
+
+fi
+
+scripts/make_backup_working
+
+#
+# 检查如果备份 Working 文件夹
+#
+result=$?
+
+if [ "$result" == "1" ]
+then
+
+  echo
+  echo "错误：旧的 Working 文件夹正在使用。确保其文件或文件夹没有打开."
+  scripts/press_enter
+  exit 1
+
+else
+
+  scripts/choose_rom $2
+  res=$?
+
+  if [ "$res" == "1" ] && [ "$2" == "kernel_only" ]
+  then
+    scripts/press_enter
+  fi
+
+  if [ `ls | grep -m 1 WORKING_` ] && [ "$res" != "1" ] && [ "$1" == "" ]
+  then
+
+    #
+    # 检查 radio.img
+    #
+
+    echo
+    cd WORKING*
+    if [ -e radio.img ]
+    then
+      echo
+      echo "注意: Working 文件夹中发现 radio.img ，如果你想删除它，你可以"
+      echo "在生成 ROM 之前任何时间删除。"
+    else
+
+      if [ -e META-INF/com/google/android/update-script ]
+      then
+        cd ..
+        scripts/update_script_should_convert_back ignore_msg
+        res=$?
+        cd WORKING_*
+      fi
+    fi
+
+    if [ -e boot.img ]
+    then
+      boot_found=yes
+    elif [ -e boot/zImage ] && [ -e boot/initrd.gz ]
+    then
+      boot_found=yes
+    else
+      boot_found=no
+    fi
+
+    if [ "$boot_found"=="yes" ]
+    then
+
+      #
+      # 提示将显示 ROM 信息
+      #
+
+      if [ "$1" == "" ]
+      then
+        cd ..
+        scripts/prompt_show_rom_info
+      else
+        cd ..
+      fi
+
+    else
+      echo
+      echo "未发现 boot 镜像文件!"
+      cd ..
+    fi
+  fi
+fi
+
+if [ "$1" == "" ]
+then
+  scripts/press_enter
+fi
+
+exit $res

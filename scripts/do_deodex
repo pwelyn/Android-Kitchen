@@ -1,0 +1,409 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+while :
+do
+
+  clear
+
+  echo
+  echo "----------------------------------------------------------------"
+  echo
+  echo "Deodex 操作(或 de-odex)将会把 ROM 中的 *.odex 文件转换成 classes.dex 文件，"
+  echo "并将它们压缩进相应的 *.apk 或 framework 中的 *.jar 文件。"
+  echo ""
+  echo "Deodex 操作的含义是使 ROM 变得定制化和轻便化。它将你的文件放在一起，使它们"
+  echo "能够用于 themes, icons, trackball/trackpad, modifications, etc 。"
+  echo
+  echo "此进程通常需要几分钟时间，并且不需要你签名这些文件。"
+  echo
+  echo "注意：odex文件进de-odexing操作后，在厨房中是不支持反编译回"
+  echo "odex格式的，是不能实现的。"
+  echo
+  echo "----------------------------------------------------------------"
+  echo
+
+  if [ ! -d WORKING_* ]
+  then
+    echo "未发现 Working 文件夹"
+    scripts/press_enter
+    exit 0
+  fi
+
+  cd WORKING_*
+
+  if [ ! -d system/app ]
+  then
+    echo "system/app 文件夹丢失"
+    cd ..
+    scripts/press_enter
+    exit 0
+  fi
+
+  if [ ! -d system/framework ]
+  then
+    echo "system/framework 文件夹丢失"
+    cd ..
+    scripts/press_enter
+    exit 0
+  fi
+
+
+
+  #
+  # Look for odex files in preload folder (e.g. in Galaxy S2)
+  #
+
+  if [ -d preload/symlink/system/app ]
+  then
+
+    cd preload/symlink/system/app
+
+    num_preload_odex=`find . | grep -c "\.odex$"`
+    num_preload_apk=`find . | grep -c "\.apk$"`
+    num_sysapp_odex=`find ../../../../system/app | grep -c "\.odex$"`
+    num_sysfr_odex=`find ../../../../system/framework | grep -c "\.odex$"`
+
+    # Case 1 - No odex files in preload or /system/app
+    if [ $num_preload_odex == 0 ] && [ $num_sysapp_odex == 0 ] 
+    then
+      echo "在 /preload/symlink/system/app 或 /system/app 未发现 ODEX 文件"
+      echo
+
+    # Case 2 - No apk/odex files in preload but odex files in /system/app
+    elif [ $num_preload_odex == 0 ] && [ $num_preload_apk == 0 ] 
+    then
+
+      if [ ! -e preload_apk_list ]
+      then
+        echo "警告: 在 /preload/symlink/system/app 未发现 APK/ODEX 文件"
+        echo
+      fi
+
+    # Case 3 - apk/odex files in preload
+    elif [ $num_preload_odex -gt 0 ] || [ $num_preload_apk -gt 0 ]
+    then
+
+      echo "注意: 在 /preload 文件夹发现 $num_preload_apk 个 APK 和 $num_preload_odex 个 ODEX 文件."
+      echo
+      echo "临时移动文件从 preload 软链文件夹到 /system/app (y/n)?"
+      echo -n "(默认: y): "
+
+      read move_files
+      echo
+
+      if [ "$move_files" == "n" ]
+      then
+        echo "警告: 没有移动!"
+      else
+
+        if [ $num_preload_apk -gt 0 ]
+        then
+          apk_list=`ls *.apk`
+          echo $apk_list > preload_apk_list
+          mv -fv *.apk ../../../../system/app/
+        else
+          touch placeholder
+        fi
+
+        if [ $num_preload_odex -gt 0 ]
+        then
+          mv -fv *.odex ../../../../system/app/
+        fi
+
+      fi
+
+      echo
+    fi
+
+    cd ../../../..
+  fi
+
+
+
+  num_odex_fr=`find system/framework | grep -c "\.odex$"`
+  num_odex_app=`find system/app | grep -c "\.odex$"`
+
+  echo "在 system/framework 下发现 $num_odex_fr 个 *.odex 文件 "
+  echo "在 system/app 下发现 $num_odex_app 个 *.odex 文件 "
+
+  if [ -d system/priv-app ]
+  then
+    if [ ! -d system/priv-app ]
+    then
+    echo
+    else
+  num_odex_priv=`find system/priv-app | grep -c "\.odex$"`
+  echo "在 system/priv-app 下发现 $num_odex_priv 个 *.odex 文件 "
+    fi
+  fi
+
+  if [ -e preload/symlink/system/app/preload_apk_list ]
+  then
+    echo
+    echo "注意: 一组 APK 文件将是移动回到 /preload 文件夹"
+    echo "在 de-odexing 后完成."
+    echo
+  fi
+
+
+  if [ $num_odex_fr == 0 ] && [ $num_odex_app == 0 ] && [ $num_odex_priv == 0 ]
+  then
+    echo
+    echo "不需要 de-odex!"
+    cd ..
+    scripts/press_enter
+    exit 0
+  fi
+
+  if [ $num_odex_fr == 0 ] && [ $num_odex_app -gt 0 ] && [ $num_odex_priv == 0 ]
+  then
+    echo
+      echo "警告: 如果 framework 文件夹已经进行了 deodex 操作，则其他apk文件夹"
+      echo "也必须进行 deodex 操作."
+    echo
+  fi
+
+
+  cd ..
+  scripts/convert_to_unix tools/deodex_files/api_level.txt
+  api_level=`scripts/get_api_level`
+  cd WORKING_*
+
+
+  #
+  # 显示菜单选项
+  #
+
+  echo
+  echo "输入选项:"
+  echo
+
+  if [ $num_odex_app -gt 0 ] && [ $num_odex_fr -gt 0 ]
+  then
+    if [ $num_odex_app -gt 0 ] && [[ $num_odex_priv -gt 0 ]] && [ $num_odex_fr -gt 0 ]
+    then
+      echo "  bc  = 备份三个文件夹(推荐)"
+    else
+      echo "  bb  = 备份两个文件夹(推荐)"
+    fi
+  fi
+
+  echo "  v  = 设置Android操作系统的版本 (当前 API 级别 = $api_level)"
+  echo
+  echo "       重要：确保你设置正确的 API 级别"
+  echo
+
+  if [ $num_odex_fr -gt 0 ]
+  then
+    echo "  f  = Deodex /system/framework"
+  fi
+  if [ $num_odex_app -gt 0 ]
+  then
+    echo "  a  = Deodex /system/app"
+  fi
+  if [[ $num_odex_priv -gt 0 ]]
+  then
+    echo "  p  = Deodex /system/priv-app"
+  fi
+  if [ $num_odex_app -gt 0 ] && [ $num_odex_fr -gt 0 ]
+  then
+    if [ $num_odex_app -gt 0 ] && [[ $num_odex_priv -gt 0 ]] && [ $num_odex_fr -gt 0 ]
+    then
+      echo "  d  = Deodex 三个文件夹(推荐)"
+    else
+      echo "  b  = Deodex 两个文件夹(推荐)"
+    fi
+  fi
+  echo "  s  = Deodex 单个文件"
+  echo "  x  = 退出"
+  echo
+  echo -n "? "
+
+  read enterChoice
+
+  list1=( app )
+  list2=( framework )
+  list3=( framework app )
+  list4=( priv-app )
+  list5=( framework priv-app app)
+
+  if [ "$enterChoice" == "a" ]
+  then
+    dir_list=app
+  elif [ "$enterChoice" == "v" ]
+  then
+    cd ..
+    scripts/change_api_level
+    continue
+  elif [ "$enterChoice" == "f" ]
+  then
+    dir_list=framework
+  elif [ "$enterChoice" == "b" ]
+  then
+    dir_list="framework app"
+  elif [ "$enterChoice" == "d" ]
+  then
+    dir_list="framework priv-app app"
+  elif [ "$enterChoice" == "p" ]
+  then
+    dir_list="priv-app"
+  elif [ "$enterChoice" == "s" ]
+  then
+    cd ..
+    scripts/choose_single_deodex
+    continue
+  elif [ "$enterChoice" == "bb" ]
+  then
+
+    #
+    # 备份
+    #
+
+    folder_list=( framework app )
+    date_str=`date '+%m%d%y_%H%M%S'`
+
+    for f in ${folder_list[@]}
+    do
+
+      backup_folder="old_`echo -n $f`_$date_str"
+      cd system/$f
+
+      echo
+      echo "在 Working 文件夹以外创建备份文件夹 $backup_folder ..."
+      mkdir ../../../$backup_folder
+      cp  -r * ../../../$backup_folder/
+      echo "$f 文件夹已完成备份."
+
+      cd ../..
+    done
+
+    cd ..
+    scripts/press_enter
+    continue
+  elif [ "$enterChoice" == "bc" ]
+  then
+
+    #
+    # 备份
+    #
+
+    folder_list=( framework app priv-app )
+    date_str=`date '+%m%d%y_%H%M%S'`
+
+    for f in ${folder_list[@]}
+    do
+
+      backup_folder="old_`echo -n $f`_$date_str"
+      cd system/$f
+
+      echo
+      echo "在 Working 文件夹以外创建备份文件夹 $backup_folder ..."
+      mkdir ../../../$backup_folder
+      cp  -r * ../../../$backup_folder/
+      echo "$f 文件夹已完成备份."
+
+      cd ../..
+    done
+
+    cd ..
+    scripts/press_enter
+    continue
+  elif [ "$enterChoice" == "x" ]
+  then
+    cd ..
+    exit 0
+  else
+    cd ..
+    continue
+  fi
+
+
+  sgs2_fix=no
+
+  # 将 java.awt.jar 添加到 framework 文件夹 (修复 Email.apk 和 MobilePrint.apk)
+  # - 感谢 xeudoxus
+  if [ `echo $dir_list | grep -c app` -gt 0 ] && \
+      [ -e system/framework/com.samsung.device.jar ] && [ ! -e system/framework/java.awt.jar ]
+  then
+    if [ -e system/app/Email.apk ] || [ -e system/app/MobilePrint.apk ] 
+    then
+      sgs2_fix=yes
+      cp -f ../tools/samsung_files/java.awt.jar system/framework/
+    fi
+  fi
+
+  cd ..
+  scripts/do_deodex_folder "$dir_list"
+
+  cd WORKING_*
+
+  if [ "$sgs2_fix" == "yes" ]
+  then
+    rm -f system/framework/java.awt.jar
+  fi
+
+  num_odex_app=`find system/app | grep -c "\.odex$"`
+  num_apk_app=`find system/app | grep -c "\.apk$"`
+  num_odex_fr=`find system/framework | grep -c "\.odex$"`
+
+  echo
+  echo "system/app 下仍然还有 $num_odex_app 个 *.odex 文件"
+  echo "system/framework 下仍然还有 $num_odex_fr 个 *.odex 文件"
+  if [ -d system/priv-app ]
+  then
+    if [ ! -d system/priv-app ]
+    then
+    echo
+    else
+  num_odex_priv=`find system/priv-app | grep -c "\.odex$"`
+  num_apk_priv=`find system/priv-app | grep -c "\.apk$"`
+  echo "system/priv-app 下仍然还有 $num_odex_priv 个 *.odex 文件 "
+    fi
+  fi
+  if [ $num_odex_fr == 0 ] && [ $num_odex_app -gt 0 ]
+  then
+  if [ $num_odex_fr == 0 ] && [ $num_odex_app -gt 0 ] && [[ $num_odex_priv -gt 0 ]]
+    then
+    echo
+    echo "警告: 如果 framework 文件夹已经 deodex，那么 app priv-app文件夹也需要 deodex."
+    else
+    echo
+    echo "警告: 如果 framework 文件夹已经 deodex，那么 app 文件夹也需要 deodex."
+    fi
+  fi
+
+  # For some Samsung Exynos Galaxy S2 / Note ROMs
+  if [ $num_odex_app == 0 ] && [ $num_apk_priv != 0 ] && [ $num_apk_app != 0 ] && [ -e preload/symlink/system/app/preload_apk_list ]
+  then
+    echo
+    echo "移回所有最初发现在 /preload/symlink/system/app 的 *.apk ..."
+    echo
+
+    for apk in `cat preload/symlink/system/app/preload_apk_list`
+    do
+      mv system/app/$apk preload/symlink/system/app/
+    done
+
+    rm -f preload/symlink/system/app/preload_apk_list
+
+    echo
+  fi
+
+  cd ..
+  scripts/press_enter
+
+  if [ $num_odex_fr == 0 ] && [[ $num_odex_priv == 0 ]] && [ $num_odex_app == 0 ]
+  then
+    exit 0
+  fi
+
+done

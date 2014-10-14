@@ -1,0 +1,67 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+cd WORKING_*
+cd META-INF/com/google/android
+
+if [ ! -e update-script ]
+then
+  echo "错误: 未发现 update-script 脚本"
+  cd ../../../../..
+  exit 0
+fi
+
+grep_data_local=`grep -c "0771 DATA:local" update-script`
+
+if [ "$grep_data_local" == "1" ]
+then
+  echo "update-script 脚本中已经包含 /data/local 内容"
+
+else
+  echo "添加 /data/local 内容到 update-script 脚本"
+
+  if [ `grep -c "format .*DATA:" update-script` == 0 ]
+  then
+    if [ `grep -c "format .*SYSTEM:" update-script` == 0 ]
+    then
+      sed -i -e '1i delete DATA:local\n' update-script
+    else
+      sed -i -e 's/format\(.*\)SYSTEM:[ ]*[\n]*/format\1SYSTEM:\ndelete DATA:local\n/' update-script
+    fi
+  else
+    #
+    # '删除 DATA:local' 命令是多余的因为你要格式化 DATA 分区,
+    # 但我们可以做到用户决定以后要删除格式化命令
+    #
+    sed -i -e 's/format\(.*\)DATA:[ ]*[\n]*/format\1DATA:\ndelete DATA:local\n/' update-script
+  fi
+
+  if [ `grep -c "copy_dir PACKAGE:data DATA:" update-script` == 0 ]
+  then
+    sed -i -e 's/delete DATA:local[ ]*[\n]*/delete DATA:local\ncopy_dir PACKAGE:data DATA:\n/' update-script
+  fi
+
+  sed -i -e 's/copy_dir PACKAGE:data DATA:[ ]*[\n]*/copy_dir PACKAGE:data DATA:\nset_perm 2000 2000 0771 DATA:local\n/' update-script
+
+  grep_data_local=`grep -c "0771 DATA:local" update-script`
+
+  if [ $grep_data_local == 0 ]
+  then
+    echo "错误: 无法在 update-script 脚本中添加 /data/local 内容"
+  else
+    echo
+    echo "你可以放置自定义开机动画 bootanimation.zip 到 /data/local文件夹."
+    echo "如果 ROM 中没有自定义动画，开机时将使用默认开机动画."
+  fi
+fi
+
+cd ../../../../..
+
+scripts/fix_update_script_blanks

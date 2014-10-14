@@ -1,0 +1,42 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+img_dir=$1
+img_file=$2
+
+if [ "$img_dir" == "" ] || [ "$img_file" == "" ]
+then
+  echo "错误:  check_if_img_yaffs 缺少参数信息."
+  echo "        Syntax: check_if_img_yaffs <file_directory> <img_file_name>"
+  echo
+  exit 1
+fi
+
+img_path=$img_dir/$img_file
+
+if [ ! -e $img_path ]
+then
+  echo "错误: 未发现 $img_path!"
+  echo
+  exit 1
+fi
+
+echo
+
+str1=`od -A n -h -j 264 -N 4 $img_path | sed -e 's/ //g'`
+str2=`od -A n -h -j 269 -N 1 $img_path | sed -e 's/ //g'`
+
+if [ "$str1" == "ff00ffff" ] && [ "$str2" == "0041" ]
+then
+  exit 1
+else
+  exit 0
+fi

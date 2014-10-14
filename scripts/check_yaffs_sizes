@@ -1,0 +1,87 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = image 镜像文件所处的文件夹位置
+# $2 = image 镜像文件的名称 (例如 data.img 或 system.img) - 需要 $1 已经确定
+#
+# 如果没有指定，脚本假定 system.img 位于 Working 文件夹
+#
+
+base_dir=`pwd`
+
+if [ "$1" == "" ]
+then
+  cd WORKING_*
+
+  if [ ! -e system/system.img ]
+  then
+    echo "错误: 在 Working 文件夹中未发现 system.img"
+    cd ..
+    exit 1
+  fi
+
+  cd system
+
+  image_file=system.img
+
+else
+
+  if [ "$2" == "" ]
+  then
+    echo "错误: 未指定 Image 镜像文件"
+    exit 1
+  fi
+
+  cd $1
+  image_file=$2
+
+fi
+
+#
+# 模块大小检查，然后计算备用的大小
+#
+
+hex_chunk=`od -x -A x $image_file | grep -m 1 "1000 [ ]*0000 [ ]*0001 [ ]*0000 [ ]*0000 [ ]*0000 [ ]*ffff [ ]*0000" | sed -e 's/ .*//'`
+
+cd $base_dir
+
+if [ "$hex_chunk" != "" ]
+then
+  dec_chunk=`printf "%d" 0x$hex_chunk`
+  echo "$image_file 文件中的模块大小为 $dec_chunk"
+
+  # Spare size
+  dec_spare=$(($dec_chunk/32))
+  echo "计算出剩余空间大小为 $dec_spare 字节"
+
+  str=`sed '20q;d' tools/unyaffs_files/unyaffs.c`
+  if [ "$str" != "#define CHUNK_SIZE $dec_chunk" ]
+  then
+    echo "设置 unyaffs.c 中模块大小 = $dec_chunk, 第20行"
+    sed -i -e '20s/.*/#define CHUNK_SIZE '$dec_chunk'/' tools/unyaffs_files/unyaffs.c
+  fi
+
+  str=`sed '21q;d' tools/unyaffs_files/unyaffs.c`
+  if [ "$str" != "#define SPARE_SIZE $dec_spare" ]
+  then
+    echo "正在设置 unyaffs.c 中备用大小 = $dec_spare, 第21行"
+    sed -i -e '21s/.*/#define SPARE_SIZE '$dec_spare'/' tools/unyaffs_files/unyaffs.c
+  fi
+
+  exit 0
+
+else
+  echo "错误: 不能检测 $image_file 中的模块大小"
+  cd ../..
+  exit 1
+fi

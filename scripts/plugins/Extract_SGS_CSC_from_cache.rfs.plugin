@@ -1,0 +1,88 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+echo
+echo "三星 Galaxy S CSC 提取"
+echo "-------------------------------"
+echo
+echo "这个脚本将从官方三星固件的 cache.img 中提取 CSC （客户软件定制）。"
+echo "CSC是一个被称为'sec_csc.zip'的文件，其中包含位置和运营商特定的配置和软件。"
+echo
+
+echo -n "继续 (y/n)? (默认: y): "
+read do_csc
+echo
+
+if [ "$do_csc" == "n" ]
+then
+  exit 0
+fi
+
+date_str=`date '+%m%d%y_%H%M%S'`
+csc_dir=csc_$date_str
+
+echo
+echo "创建文件夹 `pwd`/$csc_dir ..."
+mkdir $csc_dir
+
+echo
+echo "---> 请放置官方 cache.rfs 或 csc.rfs 到上面创建的文件夹 <--"
+
+scripts/press_enter
+
+if [ -e $csc_dir/cache.rfs ] || [ -e $csc_dir/csc.rfs ]
+then
+
+  if [ -e $csc_dir/cache.rfs ]
+  then
+    csc_file=cache.rfs
+    zip_file=sec_csc.zip
+  else
+    csc_file=csc.rfs
+    zip_file=csc.zip
+  fi
+
+  if [ `uname | grep CYGWIN` ]
+  then
+    scripts/show_magiciso $csc_dir $csc_file
+  else
+    scripts/extract_ext3_img $csc_dir $csc_file
+  fi
+
+  rm -f $csc_dir/$csc_file 2>/dev/null
+  if [ "$?" == "1" ]
+  then
+    echo
+    echo "警告: $csc_file 正在使用.  当退出使用后再手动删除."
+    echo
+  fi
+
+  if [ ! -e $csc_dir/$zip_file ]
+  then
+    echo "警告: 未发现 $zip_file!"
+    exit 1
+  else
+    echo
+    echo "完成!  你的文件是在 $csc_dir/$zip_file."
+    echo
+    echo "您可以解压缩这个文件，并复制'system'文件夹到您的ROM的"
+    echo "系统文件夹中的内容。"
+    echo
+    exit 0
+  fi
+
+else
+  echo "错误: 未发现 CSC RFS 文件!"
+  echo
+  cd ..
+  echo "删除 $csc_dir folder"
+  rm -rf csc_dir
+  exit 1
+fi

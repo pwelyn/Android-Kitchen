@@ -1,0 +1,295 @@
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+img_dir=$1
+img_file=$2
+
+if [ "$img_dir" == "" ] || [ "$img_file" == "" ] 
+then
+  echo "错误: extract_ext3_img 参数信息丢失"
+  echo "    语法: extract_ext3_img <file_directory> <img_file_name>"
+  echo
+  exit 1
+fi
+
+img_path=$img_dir/$img_file
+
+if [ ! -e $img_path ]
+then
+  echo "错误: 未发现 $img_path!"
+  echo
+  exit 1
+fi
+
+base_dir=`pwd`
+
+if [ `uname | grep CYGWIN` ]
+then
+
+  dos_path=`cygpath -wp $img_dir`
+
+  while :
+  do
+
+    clear
+
+    echo
+    echo "解包 $img_file"
+    echo "-----------------------"
+    echo
+    echo "在下面的输入选择你解压的img文件, 假设它"
+    echo "使用 EXT 文件系统. 你可能会发现一个选项工作"
+    echo "优于其他."
+    echo
+    echo "例如  EXT3: 旧的设备 比如 HTC Desire HD"
+    echo "      EXT4: 新的设备 比如 HTC Desire S"
+    echo
+    echo "  1 - 运行 Explore2fs  (EXT3 最佳选择)"
+    echo "  2 - 运行 Ext2Explore (EXT3/EXT4 适用)"
+    echo "  3 - 我已经完成解包 / 结束"
+    echo
+    echo
+    echo "注意：如果用上面列出的工具解包，出现任何问题时"
+    echo "      请再尝试其他选项."
+    echo
+    echo -n "选择数字: "
+
+    read enterNumber
+
+    if [ "$enterNumber" == "1" ]
+    then
+      scripts/show_explore2fs $img_dir $img_file
+
+    elif [ "$enterNumber" == "2" ]
+    then
+      scripts/show_ext2explore $img_dir $img_file
+
+    elif [ "$enterNumber" == "3" ]
+    then
+      break
+
+    else
+      echo "错误选项"
+    fi
+
+    if [ "$enterNumber" == "1" ] || [ "$enterNumber" == "2" ]
+    then
+      echo
+      echo "--> 如果你已解包完成，在接下来的菜单中选择 3"
+      echo
+
+      scripts/press_enter
+    fi
+
+  done
+
+
+  cd $img_dir
+  rm -f unyaffs*stackdump
+
+  cd $base_dir
+
+
+elif [ `uname | grep Linux` ]
+then
+
+  echo
+  echo "挂载 $img_file 到设备，然后提取文件 ..."
+
+  cd $img_dir
+
+  user_=`whoami`
+  mkdir ../tmp
+
+  # 从 ext4 的 (为了防止挂载卸载时，请使用：ro,noexec,noload)
+  sudo mount -o loop,ro,noexec,noload $img_file ../tmp 2>/dev/null
+  res=$?
+
+  if [ "$res" != "0" ]
+  then
+    # For ext3
+    sudo mount -o loop $img_file ../tmp 2>/dev/null
+    res=$?
+  fi
+
+  if [ "$res" == "0" ]
+  then
+
+    if [ "$img_file" == "ext4_cache.img" ] || [ "$img_file" == "cache.rfs" ]
+    then
+      sudo cp ../tmp/recovery/sec_csc.zip .
+    elif [ "$img_file" == "csc.rfs" ]
+    then
+      sudo cp ../tmp/csc.zip .
+    else
+      sudo cp -R ../tmp/* .
+    fi
+
+    sudo umount ../tmp
+    rmdir ../tmp
+    sudo chown -R $user_ *
+  else
+    echo "错误: 无法挂载  $img_file"
+  fi
+
+  rm -f unyaffs*stackdump
+
+  cd $base_dir
+
+elif [ `sw_vers | grep -o Mac` ]
+then
+
+  #
+  # Mac 支持- FUSE的帮助来自he8us
+  #
+
+  cd $img_dir
+
+  rfs_list=`ls | grep -i \\.rfs$`
+
+  # 挂载RFS文件
+  if [ "$rfs_list" != "" ]
+  then
+
+    mount_dir=/Volumes/RFS
+
+    echo "我们会做一些超级用户需要的东西"
+    if [ -d $mount_dir ]
+    then
+      #sudo umount $mount_dir 2>/dev/null
+      sudo diskutil umount force $mount_dir 2>/dev/null
+    fi
+
+    sudo mkdir $mount_dir 2>/dev/null
+    sudo hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount $img_file > temp.log
+    mydisk=`more temp.log | sed -e 's/[ \t]*$//g'`
+    rm -f temp.log
+
+    sudo mount_msdos $mydisk $mount_dir
+
+  # 检查 FUSE - for EXT2/EXT3
+  else
+
+    res=`which fuse-ext2 2>/dev/null`
+    result=$?
+
+    if [ "$result" != "0" ]
+    then
+      fuse_cmd="/usr/local/bin/fuse-ext2"
+      res=`which $fuse_cmd 2>/dev/null`
+      result=$?
+
+      if [ "$result" != "0" ]
+      then
+        echo
+        echo "您的系统没有安装FUSE."
+        echo "请阅读的Android厨房安装MacFUSE的常见问题，包括fuse-ext2."
+        exit 1
+      fi
+
+    else
+      fuse_cmd=fuse-ext2
+    fi
+
+    mount_dir=/tmp/for_kitchen
+
+  fi
+
+
+  #
+  # 现在提取Mac文件
+  #
+
+  cd $base_dir
+  cd $img_dir
+
+  # Check for CSC plugin script
+  if [ "`echo $img_dir | grep csc_`" != "" ] && [ "`echo $img_dir | grep WORKING_`" == "" ]
+  then
+    mkdir system
+    mv $img_file system
+    cd system
+    csc_plugin=1
+  fi
+
+  echo
+  echo "准备从 $img_file 提取文件"
+  mv $img_file ../$img_file
+  cd ..
+
+  # For FUSE
+  if [ "$rfs_list" == "" ]
+  then
+    if [ -d $mount_dir ]
+    then
+      umount $mount_dir
+      rm -rf $mount_dir
+    fi
+
+    mkdir $mount_dir
+
+    echo "正在尝试挂载文件系统"
+    buffer=`$fuse_cmd $img_file $mount_dir`
+    echo "$buffer"
+  fi
+
+  listing=`ls $mount_dir`
+    echo "文件系统列表，正在分析 $mount_dir  ..."
+
+  if [ "$listing" != "" ]
+  then
+
+      echo "复制文件"
+
+    if [ "$img_file" == "ext4_cache.img" ] || [ "$img_file" == "cache.rfs" ]
+    then
+      cp $mount_dir/recovery/sec_csc.zip system/
+    elif [ "$img_file" == "csc.rfs" ]
+    then
+      cp $mount_dir/csc.zip system/
+    else
+      cp -r $mount_dir/* $img_dir/
+    fi
+
+  else
+    echo "错误: 挂载点是空的"
+    echo $listing
+  fi
+
+  if [ "$rfs_list" == "" ]
+  then
+    umount $mount_dir
+    rm -rf $mount_dir
+  else
+    #sudo umount $mount_dir
+    sudo diskutil umount force $mount_dir
+    hdiutil detach $mydisk
+  fi
+
+  # Check again for CSC plugin
+  if [ "$csc_plugin" == "1" ]
+  then
+    mv system/*.zip .
+    rm -rf system
+  else
+    mv $img_file $img_dir/$img_file
+    cd system
+  fi
+
+  if [ "$listing" != "" ]
+  then
+    rm -f unyaffs*stackdump
+    cd $base_dir
+  else
+    exit 1
+  fi
+
+fi

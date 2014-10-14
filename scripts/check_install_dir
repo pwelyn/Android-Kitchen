@@ -1,0 +1,31 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+install_dir="`pwd`"
+grep_result=`echo "$install_dir" | grep ".* [ ]*"`
+
+if [ "$grep_result" != "" ]
+then
+  echo
+  echo "错误:  文件夹名称 \"$install_dir\" 包含空格字符."
+  echo "        这将导致厨房功能和操作系统出现问题."
+  echo "        请将厨房移动到一个不带空格的文件夹."
+
+  example_dir=`echo $install_dir | sed -e 's/\([^ ]*\) .*/\1\//g' -e 's/\(.*\)\/.*\//\/\1/g' -e 's/\/\//\//g'`
+  echo
+  echo "        例如: $example_dir/kitchen"
+  echo
+
+  echo
+  exit 1
+else
+  exit 0
+fi

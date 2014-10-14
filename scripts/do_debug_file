@@ -1,0 +1,107 @@
+############################################################################
+#
+# Copyright (c) 2014 - by 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+#
+############################################################################
+
+# 强制性
+api_level=$1
+
+# 强制性
+debug_file=$2
+
+
+if [ "$debug_file" == "" ]
+then
+  echo "错误: 未指定 .odex 文件"
+
+elif [ -e $debug_file ]
+then
+  echo "反编译 $debug_file ..."
+else
+  echo "错误: 未发现 $debug_file 文件"
+fi
+
+bin_list="baksmali.jar smali.jar"
+
+for bin_file in $bin_list
+do
+  if [ ! -e $bin_file ]
+  then
+    echo "错误: 未发现 $bin_file!"
+    exit 0
+  fi
+done
+
+  unzip $debug_file classes.dex
+
+java_cmd="java -Xmx512m -jar baksmali.jar -b -a $api_level -x classes.dex"
+echo $java_cmd
+$java_cmd
+is_error=$?
+
+if [ "$is_error" == "0" ] && [ -d out ]
+then
+
+  echo "反编译成 classes.dex ..."
+  java_cmd="java -Xmx512m -jar smali.jar -a $api_level -o classes.dex out"
+
+  echo $java_cmd
+  $java_cmd
+
+  rm -rf out
+
+  if [ -e classes.dex ]
+  then
+
+    main_file=$debug_file
+
+    error_found=no
+
+    if [ -e $main_file ]
+    then
+      echo "发现 $main_file"
+      ext=apk
+
+    else
+      main_file=$debug_file
+
+      if [ -e $main_file ]
+      then
+        echo "发现 $main_file"
+        ext=jar
+      else
+        echo "错误: 无法找到$debug_file"
+        error_found=yes
+      fi
+    fi
+
+
+    if [ $error_found == yes ]
+    then
+      echo "删除 classes.dex ..."
+      rm -f classes.dex
+    else
+
+      echo "将 classes.dex 打包进 $main_file ..."
+      zip -r -q $main_file classes.dex
+      rm -f classes.dex
+      if [ -e $main_file ]
+      then
+        echo "$main_file 操作成功"
+      fi
+      exit 0
+    fi
+
+  else
+    echo "警告: 无法生成classes.dex 文件!"
+    exit 1
+  fi
+
+else
+  echo "警告: 无法对 $debug_file 文件进行操作"
+  rm -rf out
+  exit 1
+fi

@@ -1,0 +1,65 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+cd WORKING_*
+
+if [ ! -e META-INF/com/google/android/update-script ]
+then
+  echo "错误: 未发现 update-script 脚本!"
+  cd ..
+  exit 0
+fi
+
+cd ..
+scripts/data_app_exists
+
+if [ "$?" == 1 ]
+then
+  echo "update-script 脚本中已经包含 /data/app 内容"
+  exit 0
+
+else
+
+  cd WORKING_*
+  cd META-INF/com/google/android
+
+  echo "添加 /data/app 内容到 update-script 脚本"
+
+  if [ `grep -c "delete DATA:app[ ]*" update-script` == 0 ]
+  then
+    if [ `grep -c "format .*DATA:" update-script` == 0 ]
+    then
+      if [ `grep -c "format .*SYSTEM:" update-script` == 0 ]
+      then
+        sed -i -e '1i delete DATA:app\n' update-script
+      else
+        sed -i -e 's/format\(.*\)SYSTEM:[ ]*[\n]*/format\1SYSTEM:\n\ndelete DATA:app\n/' update-script
+      fi
+    else
+      #
+      # '删除 DATA:app' 命令是多余的因为你要格式化 DATA 分区,
+      # 但我们可以做到用户决定以后要删除格式化命令.
+      #
+      sed -i -e 's/format\(.*\)DATA:[ ]*[\n]*/format\1DATA:\n\ndelete DATA:app\n/' update-script
+    fi
+  fi
+
+  if [ `grep -c "copy_dir PACKAGE:data DATA:" update-script` == 0 ]
+  then
+    sed -i -e 's/delete DATA:app[ ]*[\n]*/delete DATA:app\ncopy_dir PACKAGE:data DATA:\n/' update-script
+  fi
+
+  sed -i -e 's/copy_dir PACKAGE:data DATA:[ ]*[\n]*/copy_dir PACKAGE:data DATA:\nset_perm_recursive 1000 1000 0771 0644 DATA:app\n/' update-script
+
+fi
+
+cd ../../../../..
+
+scripts/fix_update_script_blanks

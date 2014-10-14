@@ -1,0 +1,55 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数
+#
+# $1 = "kernel_only" 或 "name_given"
+#
+
+date_str=`date '+%m%d%y_%H%M%S'`
+working_dir=WORKING_$date_str
+
+if [ "$1" != "kernel_only" ] && [ "$1" != "name_given" ]
+then
+
+  echo 1>&2
+  echo "新 Working 文件夹将命名为 $working_dir" 1>&2
+  echo -n "改变名称(y/n)? (默认: n): " 1>&2
+
+  read change_it
+  echo 1>&2
+
+  if [ "$change_it" == "y" ]
+  then
+
+    name_is_set=no
+
+    while [ $name_is_set == no ]
+    do
+      echo -n "请输入新名称 (使用此前缀): WORKING_" 1>&2
+      read newname
+
+      newname=`echo $newname | sed -e 's/ /_/g'`
+      working_dir="WORKING_$newname"
+
+      if [ -d original_update/$working_dir ]
+      then
+        echo "错误: 相同名称已经在 original_update 文件夹中" 1>&2
+        echo 1>&2
+      else
+        name_is_set=yes
+      fi
+
+    done
+  fi
+fi
+
+echo $working_dir

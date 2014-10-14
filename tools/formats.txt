@@ -1,0 +1,46 @@
+
+----------------------------------------------------------------------
+
+每个 ROM 的格式必须是以下值:
+ 
+ - system.img +可选 boot.img/lib.img  (例如： 官方 ROM 或 Nandroid)
+ - 自定义的 ROM 的 ZIP 文件            (例如： update.zip)
+ - ZIP 文件包含 *.img                  (例如： stock rom.zip)
+ - ZIP 文件 ROM 包含 SYSTEM + BOOT 文件夹格式
+ - 这个厨房的工作文件夹                 (例如： WORKING_old_rom)
+ 
+ 其他格式:
+ 
+ 三星 Galaxy S:
+ - factoryfs.rfs +可选 cache.rfs/zImage
+ - PDA.tar.md5 +可选 CSC.tar.md5/PHONE.tar.md5
+ - PDA.tar +可选 CSC.tar/PHONE.tar
+ - TAR/ZIP 文件包含 factoryfs.rfs +更多
+ - TAR/ZIP 文件包含 PDA.tar.md5/PDA.tar +更多
+
+ 三星 Galaxy S Plus:
+ - system.img.ext4 +可选 cache.img.ext4/boot.img
+ - TAR/ZIP 文件包含 system.img.ext4 +更多
+ 
+ 三星 Galaxy SII:
+ - factoryfs.img +可选 hidden.img/cache.img/zImage  
+ - system.img.ext4 +可选 cache.img.ext4/boot.img
+ - TAR/ZIP 文件包含 factoryfs.img/system.img.ext4 +更多
+ - system.ext4.tar +可选 boot.img (Nandroid 备份)
+
+ 三星 Galaxy SIII / Galaxy Note II / Galaxy S4
+ - system.img.ext4 + 可选 tomb.img.ext4/cache.img.ext4/boot.img
+ - system.img + 可选 cache.img/boot.img/modem.bin
+ - system.img.ext4 + 可选 cache.img/boot.img/modem.bin
+ - TAR/ZIP 文件包含上面所述
+ - system.ext4.tar + 可选 boot.img (Nandroid 备份)
+
+ 三星 - 未测试设备 (比如： Galaxy Mini):
+ - system.rfs + 可选 csc.rfs/boot.img
+ - TAR/ZIP 文件包含上面所述
+
+ Huawei（华为）:
+ - 华为软件更新文件APP (例如：UPDATE.APP)
+
+ ----------------------------------------------------------------------
+ 

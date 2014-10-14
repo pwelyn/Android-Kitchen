@@ -1,0 +1,15 @@
+
+# Samsung TASS
+
+change_mnt=yes
+
+param1=ext4
+param2=EMMC
+
+param1_sdcard=vfat
+param2_sdcard=MTD
+
+sys_mnt=\/dev\/block\/stl12
+cache_mnt=\/dev\/block\/stl14
+data_mnt=\/dev\/block\/stl13
+sdcard_mnt=\/dev\/block\/mmcblk0p1

@@ -1,0 +1,228 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = "no_create" 或 "创建" 或 "create_working
+#         - 必须指定 no_create 如果工作文件夹已经存在
+# $2 = "kernel_only" 或 "name_given" - 如果这指定则是强制性的 $1
+#
+
+if [ "$1" == "no_create" ]
+then
+  build_dir=`ls | grep -m 1 ^WORKING_`
+
+  mkdir $build_dir/system
+  mv $build_dir/system.ext4.tar $build_dir/system
+
+else
+
+  current_dir=`pwd`
+  dest_dir=$current_dir/original_update
+  scripts/check_no_bootimg $dest_dir
+
+  #
+  # 在 original_update 文件夹中检查system.ext4.tar/boot.img
+  #
+  if [ -e original_update/system.ext4.tar ]
+  then
+    echo "发现 original_update/system.ext4.tar"
+    if [ -e original_update/boot.img ]
+    then
+      echo "发现 original_update/boot.img"
+    else
+      echo "错误: 未发现 original_update/boot.img"
+      echo
+      exit 1
+    fi
+
+  else
+
+    if [ -e original_update/boot.img ]
+    then
+      echo "发现 original_update/boot.img"
+      echo "错误: 未发现 original_update/system.ext4.tar"
+    else
+      echo
+      echo "错误: 没有在 original_update 文件夹下找到的 Rom!"
+    fi
+
+    exit 1
+  fi
+
+
+  #
+  # 工作文件夹名称
+  #
+  build_dir=`scripts/set_working_folder_name $2`
+
+  echo
+  echo "创建 Working 文件夹 $build_dir ..."
+  mkdir $build_dir
+  mkdir $build_dir/system
+
+  echo "复制 boot.img ..."
+  cp original_update/boot.img $build_dir
+  echo "复制 system.ext4.tar ..."
+  cp original_update/system.ext4.tar $build_dir/system
+
+fi
+
+
+#
+# 目录树
+#
+
+mkdir -p $build_dir/META-INF/com/google/android
+echo
+echo "添加 update-script 脚本 ..."
+cp tools/update_files/update-script $build_dir/META-INF/com/google/android/
+
+
+#
+# 检查 TAR
+#
+
+system_dir=$build_dir/system
+
+cd $system_dir
+
+#
+# 检查 TAR 存档
+#
+test_tar=`od -A n --strings -j 0 -N 7 system.ext4.tar`
+
+if [ "$test_tar" == "system/" ]
+then
+  echo
+  echo "system.ext4.tar 是一个 TAR 存档"
+  echo "提取文件 ..."
+  tar xf system.ext4.tar -C ../
+
+else
+  echo "错误: system.ext4.tar 不是 TAR 存档!"
+  cd ../..
+  exit 1
+fi
+
+
+rm -f system.ext4.tar 2>/dev/null
+
+cd ..
+
+if [ ! -d system ]
+then
+  echo
+  echo "错误: 未发现 /system 文件夹!"
+  exit 1
+fi
+
+if [ ! -d system/framework ]
+then
+  echo
+  echo "错误: 未发现 /system/framework 文件夹!"
+  exit 1
+fi
+
+if [ ! -d system/app ]
+then
+  echo
+  echo "错误: 未发现 /system/app 文件夹!"
+  exit 1
+fi
+
+if [ "`ls system`" == "" ]
+then
+  echo
+  echo "错误： /system 文件夹是空的!"
+  echo
+  exit 1
+fi
+
+
+cd ..
+echo
+
+
+
+cd WORKING_*
+
+if [ ! -e boot.img ]
+then
+	cd ..
+  scripts/check_no_bootimg
+
+else
+
+	cd ..
+
+	#
+	# 检查 boot.img 的 Android 头位置这样
+	# 正确添加到工作文件夹
+	#
+
+	scripts/check_bootimg_header
+
+	# Not a valid boot.img
+	if [ "$?" == "1" ]
+	then
+
+		scripts/check_galaxy_s
+		is_gs=$?
+
+		if [ "$is_gs" == "1" ]
+		then
+		  cp_file=redbend_ua
+		else
+		  scripts/check_galaxy_s2
+		  is_gs2=$?
+
+		  if [ "$is_gs2" == "1" ]
+		  then
+		    cp_file=flash_image
+		  fi
+		fi
+
+		if [ "$is_gs" == "1" ] || [ "$is_gs2" == "1" ]
+		then
+		  echo
+		  echo "注意：boot.img 实际上有可能是一个内核 （zImage）"
+		  echo "重命名为 zImage."
+		  echo
+
+		  cd WORKING_*
+		  mv -v boot.img zImage
+		  echo
+		  cp -v ../tools/samsung_files/$cp_file .
+		  echo flash_zimage >> META-INF/com/google/android/update-script
+		  cd ..
+		  scripts/check_no_bootimg
+		fi
+	fi
+fi
+
+
+if [ "$2" != "kernel_only" ] && [ "$2" != "name_given" ]
+then
+  scripts/fix_update_script
+
+  # 修改 update-script 脚本与 Nandroid 备份功能
+  scripts/fix_update_script_with_features
+
+  scripts/remove_recovery
+fi
+
+echo "$build_dir 列表:"
+echo
+ls -l $build_dir
+
+echo
+echo "Working 文件夹设置完成!"

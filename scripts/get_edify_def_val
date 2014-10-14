@@ -1,0 +1,52 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个强制性参数:
+#
+# $1 = 设备名称
+# $2 = edify_defs 文件中的参数
+#
+
+device=$1
+param=$2
+
+base_dir=`pwd`
+
+
+if [ ! -e tools/edify_defs/$device ]
+then
+  value=UNKNOWN
+
+else
+
+  cd tools/edify_defs
+
+  str=^$param=
+  grep_str=`grep -c $param $device`
+
+  if [ $grep_str == 0 ]
+  then
+    value=UNKNOWN
+
+  else
+    value=`grep -m 1 $param $device \
+            | sed 's/'"$param"'=//g'`
+
+    if [ "$value" == "" ]
+    then
+      value=UNKNOWN
+    fi
+  fi
+
+  cd $base_dir
+fi
+
+echo $value

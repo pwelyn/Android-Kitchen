@@ -1,0 +1,62 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+clear
+
+echo
+echo "----------------------------------------------------------------"
+echo
+echo "此选项允许使用自定义开机动画来替换默认开机画面。"
+echo
+echo "开启此选项后，请将开机动画bootanimation.zip复制到/data/local文件夹"
+echo
+echo "----------------------------------------------------------------"
+echo
+
+echo -n "继续(y/n)? (默认: y): "
+read do_install
+
+if [ "$do_install" == "n" ]
+then
+  exit 0
+fi
+
+echo
+
+if [ -d WORKING_* ]
+then
+  echo
+  echo "发现 Working 文件夹"
+  cd WORKING_*
+else
+  echo
+  echo "未发现 Working 文件夹，你必须先创建一个!"
+  exit 0
+fi
+
+echo
+
+if [ -d data/local ]
+then
+  echo "/data/local 已经存在"
+else
+  echo "创建 /data/local"
+  mkdir -p data/local
+fi
+
+if [ ! -e data/local/placeholder ]
+then
+  touch data/local/placeholder
+fi
+
+cd ..
+scripts/add_data_local_to_update_script
+echo

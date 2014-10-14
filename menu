@@ -1,0 +1,124 @@
+#!/bin/bash
+
+############################################################################
+#
+# Copyright (c) 2013 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 pwelyn-越狱 汉化
+#
+############################################################################
+
+version=0.227
+
+
+if [ ! -e menu ]
+then
+  echo
+  echo "请确保你是从厨房所安装的文件夹运行本文件，否则可能会存在运行脚本错误".
+  echo "在你使用'cd'命令进入到当前目录后, 再用./menu 命令开始运行厨房, 不"
+  echo "要尝试其它命令或方法!"
+  exit 0
+fi
+
+dir_list=( original_update scripts tools )
+error_found=0
+
+for check_dir in ${dir_list[@]}
+do
+  if [ ! -e $check_dir ]
+  then
+    echo "错误:'未发现 $check_dir' 文件夹"
+    error_found=1
+  fi
+done
+
+if [ $error_found == 1 ]
+then
+  echo
+  echo "确保在这个文件夹你已正确安装了厨房."
+  exit 0
+fi
+
+
+chmod 755 scripts/*
+scripts/check_install_dir
+
+if [ "$?" == "1" ]
+then
+  exit 0
+fi
+
+scripts/init_kitchen
+scripts/check_binaries
+
+if [ "$?" == "1" ]
+then
+  exit 0
+fi
+
+
+while :
+do
+
+  clear
+
+  echo 
+  echo "============================================================"
+  echo " Android Kitchen $version - by dsixda (xda-developers.com)"
+  echo "============================================================"
+  echo " Android Kitchen中文汉化by hwh132 越狱， 新功能添加by 越狱"
+  echo "============================================================"
+  echo 
+  echo "> 主菜单"
+  echo
+  echo "  1 - 从 ROM 文件导入到 Working 文件夹（分解ROM包）"
+  echo "  2 - 添加 ROOT 权限"
+  echo "  3 - 添加 BusyBox 支持"
+  echo "  4 - 禁用 开机音乐"
+  echo "  5 - Zipalign 所有 *.apk 文件优化内存使用"
+  echo "  6 - 更改 ROM 的 wipe 状态"
+  echo "  7 - 更改 ROM 名称"
+  echo "  8 - 显示 Working 文件夹的信息"
+  echo 
+  echo "  0 - 高级选项"
+  echo " 00 - 传统选项 (旧的和较少用到的选项)"
+  echo " 99 - 从 Working 文件夹生成ROM刷机包"
+  echo
+  echo "  u - 关于厨房/更新/捐赠"
+  echo "  x - 退出"
+  echo
+  echo 
+  echo -n "输入选项: "
+  read opt
+
+  if [ "$opt" != "x" ] && [ "$opt" != "u" ] && [ "$opt" != "1" ]
+  then
+    scripts/check_multiple_working
+  fi
+  
+  if [ "$?" != "1" ]
+  then
+    case $opt in
+      1) clear; scripts/check_rom; continue;;
+      2) scripts/do_root; continue;;
+      3) scripts/add_busybox show_help;;
+      4) scripts/disable_sounds;;
+      5) scripts/do_zipalign;;
+      6) scripts/change_wipe;;
+      7) scripts/change_rom_name;;
+      8) scripts/show_rom_info;;
+      0) scripts/menu_advanced $version; continue;;
+      00) scripts/menu_legacy $version; continue;;
+      99) scripts/build_rom;;
+      u) scripts/about $version; continue;;
+      x) scripts/init_kitchen; clear; echo; echo "再见."; echo; exit 1;;
+      *) echo "无效的选项"; continue;;
+    esac
+  fi
+
+  scripts/press_enter
+
+done
+

@@ -1,0 +1,112 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+
+if [ ! -d WORKING_* ]
+then
+  echo "未发现 Working 文件夹!"
+  exit 0
+fi
+
+cd WORKING_*
+
+if [ ! -e boot.img ]
+then
+  echo "未发现 boot.img!"
+  exit 0
+fi
+
+
+cd ..
+current_cmd=`scripts/get_cmdline`
+
+if [ "$current_cmd" == "" ]
+then
+  current_cmd2="(None)"
+else
+  current_cmd2=$current_cmd
+fi
+
+echo
+echo "在 boot.img 中的当前命令行值:"
+echo
+echo "$current_cmd2"
+echo
+echo
+echo "注意: 通常你不应该改变这个值，在你的ROM中。"
+echo "他的特点是用于*高级*用户"
+echo "使用不同的值."
+echo
+echo -n "你想更改它 (y/n)? (默认: y): "
+
+read do_change
+echo
+
+if [ "$do_change" == "n" ]
+then
+  echo "OK, 命令行没有更改"
+
+else
+
+  echo -n "请输入新的 命令行（或按回车键清除）: "
+  read new_cmd
+  echo
+
+  if [ "$new_cmd" == "" ]
+  then
+   echo "警告: 输入的 命令行 是空字符串"
+
+  elif [ ${#new_cmd} -lt 3 ]
+  then
+    echo "错误: 字符串必须长于2个字符"
+    echo
+    exit 0
+  fi
+
+  if [ "$new_cmd" == "$current_cmd" ]
+  then
+    echo "您的命令代码值与原始值相同"
+    echo
+    exit 0
+  fi
+
+
+  base_addr=`scripts/get_kernel_base_addr`
+  page_size=`scripts/get_boot_img_page_size`
+
+  scripts/ensure_boot_extracted
+  scripts/build_boot_img $page_size $base_addr "$new_cmd"
+
+  current_cmd=`scripts/get_cmdline`
+  if [ "$current_cmd" == "" ]
+  then
+    current_cmd2="(None)"
+  else
+    current_cmd2=$current_cmd
+  fi
+
+  echo
+  echo "------------------------------------------------------------"
+  echo
+  echo "在boot.img中 命令行 将设置为："
+  echo
+  echo "$current_cmd2"
+
+  if [ "$current_cmd" != "$new_cmd" ]
+  then
+    echo
+    echo "警告: 指定命令行不符合规定值"
+  fi
+
+fi
+
+echo

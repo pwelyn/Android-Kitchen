@@ -1,0 +1,106 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+bin_list=( clear gcc java perl sed wget od wc cpio zip unzip )
+arg_list=( foo dumpversion version v -version V -version -version -version -help -help )
+
+show_header=1
+
+for (( i = 0 ; i < ${#bin_list[@]} ; i++ ))
+do
+
+  if [ $show_header == 1 ]
+  then
+    clear
+    echo
+    echo
+    echo
+    echo
+    echo "欢迎使用 dsixda 开发的 Android 离线厨房!"
+    echo
+    echo "by hwh132 越狱 汉化"
+    echo
+    echo -n "请稍等 "
+    for (( count = 0 ; $count <= $i ; count++ ))
+    do
+      echo -n "."
+    done
+
+    show_header=0
+
+  else
+    echo -n "."
+  fi
+
+  found_error=0
+
+  bin=${bin_list[$i]}
+  argmt=${arg_list[$i]}
+
+  res=`$bin -$argmt 2>/dev/null`
+  result=$?
+
+  if [ "$result" == "127" ]
+  then
+    echo
+    echo
+    echo "错误:  未安装应用程序'$bin'，如果没有它厨房就没有这个功能."
+    echo "        确保在安装过程中，你没有错过任何一个步骤！"
+    echo "        参照到Android XDA-developers.com厨房常见问题解答获得进一步的帮助。"
+    echo
+    echo "        ** 在提问之前，请阅读常见问题解答！ **"
+    echo
+
+    if [ "$bin" == "clear" ]
+    then
+      echo "        是的，此错误已经包含在常见问题中了，不要浪费"
+      echo "        你的时间来给我发送信息，只要读一下就好了。"
+      echo
+    fi
+
+    found_error=1
+
+  elif [ "$bin" == "sed" ] || [ "$bin" == "od" ]
+  then
+
+    grep_cmd=`$bin --version | grep -m 1 GNU`
+
+    if [ "$grep_cmd" == "" ]
+    then
+      echo
+      echo
+      echo "错误:  您没有安装 $bin 的正确版本."
+      echo "        请参阅 xda-developers.com Android 厨房常见问题，以确保您已安装的 $bin 的 GNU 版本"
+      echo
+
+      found_error=1
+
+    fi
+  fi
+
+  if [ $found_error == 1 ]
+  then
+    #echo -n "忽略并继续 (y/n)? (默认: n): "
+    #read proceedCheck
+    proceedCheck=n
+
+    if [ "$proceedCheck" != "y" ]
+    then
+      exit 1
+    else
+      show_header=1
+    fi
+  fi
+
+done
+
+
+exit 0

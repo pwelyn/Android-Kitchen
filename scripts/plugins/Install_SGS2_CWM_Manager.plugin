@@ -1,0 +1,75 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+echo
+echo "SGS2 ClockworkMod Manager by Chainfire"
+echo "--------------------------------------"
+echo
+echo "This script will install the ClockworkMod Manager app for the"
+echo "Samsung Galaxy S2.  This is required if you need the custom"
+echo "recovery menu and you are not using the CF-Root zImage (which"
+echo "would have installed the app automatically)."
+echo
+echo "NOTE: You'll still need a custom/rooted kernel for this app"
+echo "to run."
+echo
+
+echo -n "继续 (y/n)? (默认: y): "
+read do_cwm
+echo
+
+if [ "$do_cwm" == "n" ]
+then
+  exit 0
+fi
+
+
+if [ -d WORKING_* ]
+then
+  echo
+  echo "未发现 Working 文件夹"
+else
+  echo
+  echo "未发现 Working 文件夹, 你必须创建一个!"
+  exit 0
+fi
+
+
+scripts/check_galaxy_s2
+if [ "$?" != "1" ]
+then
+  echo "错误: ROM 不兼容"
+  exit 0
+fi
+
+
+cwm_file=CWMManager.apk
+
+cd WORKING_*
+
+res=`find . -name $cwm_file`
+if [ "$res" != "" ]
+then
+  echo "已发现 $res "
+  cd ..
+  exit 0
+fi
+
+cd ..
+scripts/add_data_app dont_ask
+cd WORKING_*
+
+echo
+echo "复制 app ..."
+cp -v ../tools/samsung_files/sgs2_cwm/$cwm_file data/app/
+cd ..
+
+echo
+echo "完成"

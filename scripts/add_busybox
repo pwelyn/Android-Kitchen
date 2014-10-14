@@ -1,0 +1,128 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# exit 1 = busybox not created
+# exit 0 = busybox is now in working folder
+#
+
+if [ "$1" == "" ]
+then
+  clear
+
+elif [ "$1" == "show_help" ]
+then
+
+  clear
+  echo
+  echo "-----------------------------------------------------------------"
+  echo
+  echo "BusyBox 是一个可执行文件，它集合了很多UNIX中的常见实用工具"
+  echo "一些需要Root权限的应用程序需要它。"
+  echo
+  echo "-----------------------------------------------------------------"
+  echo
+  echo -n "添加 BusyBox (y/n)? (默认: y): "
+  read do_bb
+
+  if [ "$do_bb" == "n" ]
+  then
+    exit 1
+  fi
+fi
+
+if [ ! -d WORKING_* ]
+then
+  echo "未找到 Working 文件夹!"
+  exit 1
+fi
+
+cd WORKING_*
+
+su_path=`find . -name su`
+
+if [ "$su_path" == "" ]
+then
+  echo "在 Working 文件夹中未发现 su 文件"
+  cd ..
+  exit 1
+else
+  echo
+  echo "发现 $su_path"
+fi
+
+
+version=`more ../tools/busybox_files/version.txt | sed -e 's/BusyBox \(.*\)$/\1/g'`
+
+if [ -e system/bin/busybox ]
+then
+  echo
+  echo "Working 文件夹中已经包含 /system/bin/busybox"
+
+  if [ "$1" == "show_help" ]
+  then
+    echo -n "使用 $version 版本的 BusyBox 替换当前BusyBox(y/n)? (默认: y): "
+    read replace_bin_bb
+    echo
+
+    if [ "$replace_bin_bb" == "n" ]
+    then
+      echo "取消"
+    else
+      echo "替换 /system/bin/busybox"
+      cp -f ../tools/busybox_files/busybox system/bin/
+    fi
+  fi
+
+  cd ..
+  exit 0
+fi
+
+echo
+
+if [ -d system/xbin ]
+then
+  echo "发现 /system/xbin"
+
+  if [ -e system/xbin/busybox ]
+  then
+
+    echo
+    echo "Working folder already has /system/xbin/busybox"
+
+    if [ "$1" == "show_help" ]
+    then
+    echo -n "使用 $version 版本的 BusyBox 替换当前BusyBox(y/n)? (默认: y): "
+      read replace_bb
+      echo
+    else
+      replace_bb=n
+    fi
+
+    if [ "$replace_bb" == "n" ]
+    then
+      cd ..
+      exit 0
+    fi
+
+  echo "替换 /system/xbin/busybox"
+  fi
+else
+  echo "创建 /system/xbin"
+  mkdir system/xbin
+fi
+
+echo "添加 /system/xbin/busybox"
+cp -f ../tools/busybox_files/busybox system/xbin/
+cd ..
+
+scripts/add_busybox_to_update_script
+
+exit 0

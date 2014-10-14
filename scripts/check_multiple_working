@@ -1,0 +1,20 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+num_working=`ls | grep -c "^WORKING_"`
+if [ $num_working -gt 1 ]
+then
+  echo
+  echo "错误: 你创建了多个 Working 文件夹"
+  exit 1
+fi
+
+exit 0

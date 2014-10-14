@@ -1,0 +1,148 @@
+############################################################################
+#
+# Copyright (c) 2014 - by 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+#
+############################################################################
+
+
+while :
+do
+
+  clear
+
+  echo
+  echo "----------------------------------------------------------------"
+  echo
+  echo "去调试功能将会把ROM中的apk和jar中的classes.dex 文件进行处理，主要"
+  echo "去除例如：.line和 .prologue代码，最后压缩进相应的 apk或jar 文件中"
+  echo ""
+  echo
+  echo "此进程通常需要几分钟时间，系统自带apk不需要重新签名(非系统自带apk"
+  echo "需要手动重新签名)"
+  echo
+  echo "注意：去调试功能只适合Deodex操作后的ROM进行操作 未合并odex的ROM请"
+  echo "先使用厨房合并功能，合并所有的odex再进行去调试操作"
+  echo
+  echo "----------------------------------------------------------------"
+  echo
+
+  if [ ! -d WORKING_* ]
+  then
+    echo "未发现 Working 文件夹"
+    scripts/press_enter
+    exit 0
+  fi
+
+  cd WORKING_*
+
+  if [ ! -d system/app ]
+  then
+    echo "system/app 文件夹丢失"
+    cd ..
+    scripts/press_enter
+    exit 0
+  fi
+
+  if [ ! -d system/framework ]
+  then
+    echo "system/framework 文件夹丢失"
+    cd ..
+    scripts/press_enter
+    exit 0
+  fi
+
+  num_jar_fr=`find system/framework | grep -c "\.jar$"`
+  num_apk_app=`find system/app | grep -c "\.apk$"`
+
+  echo "在 system/framework 下发现 $num_jar_fr 个 jar 文件 "
+  echo "在 system/app 下发现 $num_apk_app 个 apk 文件 "
+
+  if [ -d system/priv-app ]
+  then
+    if [ ! -d system/priv-app ]
+    then
+    echo
+    else
+    num_apk_priv=`find system/priv-app | grep -c "\.apk$"`
+    echo "在 system/priv-app 下发现 $num_apk_priv 个 *.apk 文件 "
+    fi
+  fi
+  cd ..
+  scripts/convert_to_unix tools/deodex_files/api_level.txt
+  api_level=`scripts/get_api_level`
+  cd WORKING_*
+
+
+  #
+  # 显示菜单选项
+  #
+
+  echo
+  echo "输入选项:"
+  echo
+
+
+  echo "  v  = 设置Android操作系统的版本 (当前 API 级别 = $api_level)"
+  echo
+  echo "       重要：确保你设置正确的 API 级别"
+  echo
+
+  if [ $num_jar_fr -gt 0 ]
+  then
+    echo "  f  = 去除 /system/framework"
+  fi
+  if [ $num_apk_app -gt 0 ]
+  then
+    echo "  a  = 去除 /system/app"
+  fi
+  if [[ $num_apk_priv -gt 0 ]]
+  then
+    echo "  p  = 去除 /system/priv-app"
+  fi
+  echo "  x  = 退出"
+  echo
+  echo -n "? "
+
+  read enterChoice
+
+  list1=( app )
+  list2=( priv-app )
+
+  if [ "$enterChoice" == "a" ]
+  then
+    dir_list=app
+  elif [ "$enterChoice" == "v" ]
+  then
+    cd ..
+    scripts/change_api_level
+    continue
+  elif [ "$enterChoice" == "f" ]
+  then
+    cd ..
+    scripts/do_debug_framework
+    continue
+  elif [ "$enterChoice" == "p" ]
+  then
+    dir_list="priv-app"
+  elif [ "$enterChoice" == "x" ]
+  then
+    cd ..
+    exit 0
+  else
+    cd ..
+    continue
+  fi
+
+
+  cd ..
+  scripts/do_debug_folder "$dir_list"
+
+  cd WORKING_*
+
+
+  cd ..
+  scripts/press_enter
+
+done

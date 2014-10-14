@@ -1,0 +1,76 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+#Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+echo
+
+if [ -d BOOT-EXTRACTED ]
+then
+  echo "发现 BOOT-EXTRACTED 文件夹，检查内容 ..."
+
+  if [ -d BOOT-EXTRACTED/boot.img-ramdisk ]
+  then
+    echo "发现 boot.img-ramdisk"
+
+    if [ -e BOOT-EXTRACTED/zImage ]
+    then
+      echo "发现 zImage"
+    else
+      echo "找不到 BOOT-EXTRACTED/zImage"
+      exit 0
+    fi
+
+  else
+    echo "找不到现 BOOT-EXTRACTED/boot.img-ramdisk 文件夹!"
+    exit 0
+  fi
+
+else
+  echo "找不到 BOOT-EXTRACTED 文件夹!"
+  exit 0
+fi
+
+
+if [ -d WORKING_* ]
+then
+  echo "发现 Working 文件夹"
+else
+  echo "未发现 Working 文件夹!"
+  exit 0
+fi
+
+
+echo
+echo "创建 initrd.gz ..."
+
+cd BOOT-EXTRACTED/boot.img-ramdisk
+find . | cpio -o -H newc | gzip > ../initrd.gz
+cd ..
+rm -rf boot.img-ramdisk
+
+cd ..
+cd WORKING_*
+
+if [ -e boot.img ]
+  then
+  echo
+#  echo "Replacing boot.img in working folder with NAND boot folder ..."
+  echo "用 NAND boot文件夹替换 Working 文件夹中 boot.img ..."
+  rm -f boot.img
+fi
+
+if [ -d boot ]
+then
+  echo
+  echo "删除旧的 NAND boot 文件夹 ..."
+  rm -rf boot
+fi
+
+mv ../BOOT-EXTRACTED boot
+cd ..

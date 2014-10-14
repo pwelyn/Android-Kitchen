@@ -1,0 +1,19 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+cd WORKING_*
+
+temp=`od -A n -H -j 20 -N 4 boot.img | sed 's/ //g'`
+ramdisk_load_addr=0x$temp
+
+cd ..
+
+echo $ramdisk_load_addr

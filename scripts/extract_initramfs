@@ -1,0 +1,71 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+##
+## unpack-initramfs 脚本并不是在所有 zImages 中都能正常工作！！
+##
+
+clear
+
+scripts/prompt_remove_boot_extracted
+
+if [ ! -d BOOT-EXTRACTED ]
+then
+
+  if [ -d WORKING_* ]
+  then
+    echo
+    echo "发现 Working 文件夹"
+  else
+    echo
+    echo "未发现 Working 文件夹，你需要创建一个!"
+    exit 0
+  fi
+
+  initramfs_dir=BOOT-EXTRACTED
+  mkdir $initramfs_dir
+
+  cd WORKING_*
+
+  if [ -e zImage ]
+  then
+
+    cp zImage ../BOOT-EXTRACTED
+    cd ..
+    cp tools/samsung_files/unpack-initramfs BOOT-EXTRACTED/
+
+    cd BOOT-EXTRACTED
+    ./unpack-initramfs zImage
+
+    if [ ! -e kernel ]
+    then
+      echo "错误: 未发现 kernel 内核文件!"
+    fi
+
+    if [ ! -d initramfs_root ]
+    then
+      echo "错误: 未发现 initramfs_root 文件夹!"
+    else
+      mv -f initramfs_root boot.img-ramdisk
+    fi
+
+    rm -f unpack-initramfs zImage
+    cd ..
+    echo
+
+  else
+    echo "错误: 未发现 zImage!"
+    echo
+    cd ..
+    echo "删除 $initramfs_dir 文件夹"
+    rm -rf $initramfs_dir
+    exit 0
+  fi
+fi

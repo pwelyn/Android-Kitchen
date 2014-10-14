@@ -1,0 +1,45 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+cd WORKING_*
+
+if [ -e system/cust/hw/default/wpa_supplicant.conf ] && \
+     [ ! -e /system/etc/wifi/wpa_supplicant.conf ]
+then
+
+  echo
+  cd system
+
+  if [ -d etc ]
+  then
+
+    if [ "`find etc -maxdepth 1 -name wifi -type f`" != "" ] || [ "`find etc -maxdepth 1 -name wifi -type l`" != "" ]
+    then
+      echo "删除 /system/etc/wifi 文件"
+      rm -f etc/wifi
+    fi
+
+  else
+    echo "创建 /system/etc 文件夹"
+    mkdir etc
+  fi
+
+  if [ "`find etc -maxdepth 1 -name wifi -type d`" == "" ]
+  then
+    echo "创建 /system/etc/wifi 文件夹"
+    mkdir etc/wifi
+  fi
+
+  echo "复制 /system/cust/hw/default/wpa_supplicant.conf 到 /system/etc/wifi/ 文件夹"
+  cp -f cust/hw/default/wpa_supplicant.conf etc/wifi/
+
+fi
+

@@ -1,0 +1,109 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# This script extracts the contents of the boot.img from the Working folder
+#
+# 此脚本有一个可选参数:
+#
+# $1 = 如果设置 'no_clear'，当启动时不会清除
+#
+
+if [ "$1" == "" ]
+then
+  clear
+fi
+
+scripts/prompt_remove_boot_extracted
+
+if [ ! -d BOOT-EXTRACTED ]
+then
+
+  if [ -d WORKING_* ]
+  then
+    echo
+    echo "发现 Working 文件夹"
+  else
+    echo
+    echo "未发现 Working 文件夹，需要创建一个!"
+    exit 0
+  fi
+
+  cd WORKING_*
+
+  if [ -e boot.img ]
+  then
+
+    cd ..
+    scripts/check_bootimg_header
+    scripts/check_kernel_offset
+    res=$?
+
+    if [ "$res" == "0" ]
+    then
+      kernel_file=extract-kernel.pl
+      ramdisk_file=extract-ramdisk.pl
+    else
+      exit 0
+    fi
+
+    echo "创建 'BOOT-EXTRACTED'文件夹 ..."
+    cd WORKING_*
+    mkdir ../BOOT-EXTRACTED
+    cp boot.img ../BOOT-EXTRACTED/
+
+    cd ..
+    cp tools/extract_boot_files/$kernel_file BOOT-EXTRACTED/extract-kernel.pl
+    cp tools/extract_boot_files/$ramdisk_file BOOT-EXTRACTED/extract-ramdisk.pl
+    cd BOOT-EXTRACTED
+
+    echo
+      echo "提取 kernel ..."
+    ./extract-kernel.pl boot.img 2>/dev/null
+
+    if [ ! -e zImage ]
+    then
+        echo "错误: 未发现 zImage !"
+    else
+      test_z=`od -A n -j 1 -N 4 zImage | sed 's/ //g'`
+      if [ "$test_z" == "" ]
+      then
+          echo "错误: zImage 是空的!"
+      fi
+    fi
+
+      echo "提取 ramdisk ..."
+    ./extract-ramdisk.pl boot.img 2>/dev/null
+
+    if [ ! -d boot.img-ramdisk ]
+    then
+        echo "错误: 未发现 ramdisk 文件夹!"
+    fi
+
+    rm boot.img
+    rm extract-*.pl
+    cd ..
+    echo
+
+  else
+
+    if [ -e boot/initrd.gz ] && [ -e boot/zImage ]
+    then
+      cd ..
+      scripts/ensure_nand_extracted $1
+
+    else
+        echo "错误: 未发现 boot.img!"
+      echo
+      cd ..
+      exit 0
+    fi
+  fi
+fi

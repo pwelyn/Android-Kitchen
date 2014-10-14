@@ -1,0 +1,221 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+scripts/check_galaxies
+
+if [ "$?" == "1" ]
+then
+  clear
+  echo
+  echo "厨房的这个功能不支持此 ROM"
+  exit 0
+fi
+
+if [ "$1" == "" ]
+then
+  clear
+
+elif [ "$1" == "show_help" ]
+then
+
+  clear
+  echo
+  echo "-----------------------------------------------------------------"
+  echo
+  echo "Apps2SD 是一种功能，将允许所有应用程序安装到 SD 卡，以节省你设备上的存储空间."
+  echo
+  echo "注意: 此功能适用于内部存储较小的设备，如果你的设备拥有较大"
+  echo "内部存储（例如Nexus S）那么不需要这个功能（影响软件运行速度）"
+  echo
+  echo "厨房使用 Darktremor Apps2SD 方法。请确保您的存储卡有较快速度"
+  echo "（例如Class 6）, 使用适合文件系统的分区最好是 EXT3"
+  echo "通常并不需要 Swap 分区"
+  echo
+  echo "-----------------------------------------------------------------"
+  echo
+
+fi
+
+device_name=`scripts/get_device_name`
+change_mnt=`scripts/get_edify_def_val $device_name change_mnt`
+change_mnt_dell=`scripts/get_edify_def_val $device_name change_mnt_dell`
+
+if [ -e tools/edify_defs/$device_name ]
+then
+  if [ "$change_mnt" != "UNKNOWN" ] || [ "$change_mnt_dell" != "UNKNOWN" ]
+  then
+    echo "警告: 此设备 ($device_name)  很可能不支持 Apps2SD!"
+    echo
+  fi
+fi
+
+
+echo -n "继续并安装 Apps2SD (y/n)? (默认: y): "
+read do_apps2sd
+
+if [ "$do_apps2sd" == "n" ]
+then
+  exit 0
+fi
+
+echo
+
+if [ -d WORKING_* ]
+then
+
+  cd WORKING_*
+
+  if [ ! -e META-INF/com/google/android/update-script ]
+  then
+    echo "错误: 未发现 update-script 脚本"
+    cd ..
+    exit 0
+  fi
+
+  su_path=`find . -name su`
+
+  if [ "$su_path" == "" ]
+  then
+    echo "Working 文件夹下找不到 SU 文件!"
+    echo "首先你必须 ROOT 你的 ROM"
+    cd ..
+    exit 0
+  else
+
+    echo
+    echo "发现 $su_path"
+
+    cd ..
+    scripts/a2sd_exists
+
+    if [ "$?" == "1" ]
+    then
+      echo
+      echo "A2SD 安装成功"
+      scripts/add_cachesd_to_update_script
+      exit 0
+    fi
+
+  fi
+
+else
+  echo
+  echo "未发现 Working 文件夹，你需要创建一个"
+  exit 0
+fi
+
+
+scripts/ensure_boot_extracted
+
+if [ -d BOOT-EXTRACTED ]
+then
+  if [ -d WORKING_* ]
+  then
+    echo
+  else
+    exit 0
+  fi
+else
+  exit 0
+fi
+
+if [ -d BOOT-EXTRACTED/boot.img-ramdisk ]
+then
+  cd BOOT-EXTRACTED/boot.img-ramdisk
+else
+  echo "错误: 未发现 BOOT-EXTRACTED/boot.img-ramdisk 文件夹"
+  exit 0
+fi
+
+test_property=`grep -c "on property:cm.filesystem.ready=1" init.rc`
+test_start_a2sd=`grep -c "start a2sd" init.rc`
+test_sysinit=`grep -c "start sysinit" init.rc`
+test_cm_sysinit=`grep -c "exec /system/bin/sysinit" init.rc`
+
+if [[ "$test_property" != "0" && "$test_start_a2sd" != "0" ]] || \
+   [[ "$test_property" != "0" && "$test_sysinit" != "0" ]] || \
+   [[ "$test_property" != "0" && "$test_cm_sysinit" != "0" ]]
+then
+  echo "init.rc 中已经开启 a2sd"
+  cd ../..
+  echo
+  echo "删除 BOOT-EXTRACTED 文件夹 ..."
+  rm -rf BOOT-EXTRACTED
+
+else
+
+  echo
+  echo "修改 ramdisk 中的 init.rc 文件以开启 Apps2SD ..."
+
+
+  if [ "$test_sysinit" != "0" ]
+  then
+    sed -i -e 's/start sysinit/start sysinit\n    on property:cm.filesystem.ready=1/' init.rc
+
+  elif [ "$test_start_a2sd" != "0" ] && [ "$test_property" == "0" ]
+  then
+    sed -i -e 's/start a2sd/start a2sd\n    on property:cm.filesystem.ready=1/' init.rc
+
+  elif [ "$test_start_a2sd" == "0" ] && [ "$test_property" == "0" ]
+  then
+    sed -i -e 's/class_start default/start a2sd\n    on property:cm.filesystem.ready=1\n\n    class_start default/' init.rc
+
+  elif [ "$test_start_a2sd" == "0" ] && [ "$test_property" != "0" ]
+  then
+    sed -i -e 's/on property:cm.filesystem.ready=1/start a2sd\n    on property:cm.filesystem.ready=1/' init.rc
+  fi
+
+  test_service_a2sd=`grep -c "service a2sd" init.rc`
+  test_service_sysinit=`grep -c "service sysinit" init.rc`
+
+  if [ "$test_service_a2sd" == "0" ] && [ "$test_service_sysinit" == "0" ]
+  then
+    sed -i -e 's/service media /service a2sd \/system\/bin\/logwrapper \/system\/bin\/sh \/system\/bin\/a2sd\n    disabled\n    oneshot\n\nservice media /' init.rc
+  fi
+
+  cd ../..
+  scripts/build_boot_img
+
+fi
+
+scripts/add_apps2sd_files
+scripts/add_apps2sd_to_update_script
+res=$?
+
+if [ "$res" == "0" ]
+then
+
+  #
+  # apps2sd 可能包括 Bash 二进制文件
+  #
+  find_cmd=`find tools/apps2sd_files -name bash`
+  if [ "$find_cmd" != "" ]
+  then
+    scripts/add_bash_to_update_script
+  fi
+
+  #
+  # 提示 busybox 运行方法
+  #
+  if [ "$test_sysinit" == "0" ]
+  then
+    scripts/add_busybox_run_parts for_apps2sd
+  fi
+
+  #
+  # Dalvik-cache to SD
+  #
+  scripts/add_cachesd_to_update_script
+
+  echo
+  echo "完成"
+
+fi

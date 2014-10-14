@@ -1,0 +1,83 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+nand=false
+
+cd WORKING_*
+if [ -e boot.img ]
+then
+
+  cd ..
+  cmd_line=`scripts/get_cmdline`
+
+  if [ "$cmd_line" == "dsixda NAND" ]
+  then
+    nand=true
+    original_type=boot.img
+  fi
+
+elif [ -d boot ] && [ -e boot/initrd.gz ] && [ -e boot/zImage ]
+then
+  nand=true
+  original_type="boot folder"
+  cd ..
+
+else
+  cd ..
+fi
+
+
+if [ "$nand" == "true" ]
+then
+
+  echo
+  echo "已检测到 NAND ROM (已检查 $original_type)。选择数字:"
+  echo
+  echo "  1 = 创建 ROM 和 /boot 文件夹 (例如适用 MAGLDR bootloader)"
+  echo "  2 = 创建 ROM 和 boot.img     (例如适用 cLK bootloader)"
+  echo
+  echo -n "? (默认=1) "
+
+  read enter_option
+  echo
+
+  #
+  # ROM 中使用 /boot 文件夹
+  #
+  if [ "$enter_option" != "2" ]
+  then
+
+    if [ "$original_type" == "boot.img" ]
+    then
+      echo "转换 boot.img 到 boot 文件夹 ..."
+      scripts/ensure_boot_extracted no_clear
+      scripts/build_nand_boot
+    else
+      echo "已经存在 /boot 文件夹，不需要更改"
+    fi
+
+  #
+  # ROM 中使用 boot.img
+  #
+  else
+    echo "转换 boot.img 为合适的 boot.img ..."
+    scripts/ensure_boot_extracted no_clear
+    scripts/build_boot_img_for_nand
+  fi
+
+fi
+
+
+
+
+
+
+

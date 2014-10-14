@@ -1,0 +1,81 @@
+#
+# The values below should be set in each file in this folder.
+#
+# Each file represents a device name (set in ro.product.device of
+# build.prop)
+#
+
+# If yes, then this device requires changing the mount point 
+# names in the new updater-script or update-script
+# DO NOT SET TO 'yes' IF DEVICE IS BY DELL
+change_mnt=no
+
+# If yes, the device is by Dell and requires changing the mount
+# point names in the new updater-script or update-script
+change_mnt_dell=no
+
+#
+# NOTE: The update-script will be converted to updater-script if the 
+#       definition file for the device exists.  If 'change_mnt' or 
+#       'change_mnt_dell' are set to 'yes' then the mount names will 
+#       also be changed.
+#
+
+# Mention the mount point names if change_mnt=yes
+# Use '\/' instead of '/'
+# e.g. sys_mnt=\/dev\/block\/mcblk0p25
+#
+# If unknown, set to: ???
+sys_mnt=???
+cache_mnt=???
+boot_mnt=???
+data_mnt=???
+sdcard_mnt=???
+
+# Set this mount point for the modem.bin in Samsung devices like the Galaxy S2
+modem_mnt=
+
+# Set this mount point for the preload partition on some Samsung devices like the Galaxy S2
+preload_mnt=
+
+# Set this mount point if you know what it is (e.g. on Motorola Atrix)
+webtop_mnt=
+
+# Filesystem info for SYSTEM/DATA/CACHE/etc.
+# e.g. param1=ext3, param2=EMMC
+param1=
+param2=
+
+# If SDCARD filesystem is different from above, then mention it
+# e.g. param1_sdcard=vfat, param2_sdcard=MTD
+param1_sdcard=
+param2_sdcard=
+
+# If CACHE filesystem is different from above, then mention it 
+param1_cache=
+param2_cache=
+
+# If yes, the device does not require using a 'tmp' folder when
+# flashing the boot.img in the updater-script
+#
+# e.g. package_extract_file("boot.img", "/dev/block/blah1");
+fix_boot=no
+
+# If yes, the device requires a 'tmp' folder when flashing the
+# boot.img in the updater-script, PLUS the boot partition name
+# needs to be used, rather than just 'boot'
+#
+# e.g. Replace: write_raw_image("/tmp/boot.img", "boot")
+#      with:    write_raw_image("/tmp/boot.img", "/dev/block/blah1")
+fix_boot2=no
+
+# If yes, the device requires a 'dd' command to write the boot.img
+# 
+# e.g. Replace: write_raw_image("/tmp/boot.img", "boot")
+#      with:    run_program("/sbin/busybox", "dd", "if=/tmp/boot.img", "of=/dev/block/blah")
+fix_boot3=no
+
+# Device uses /cache instead of /tmp, e.g. when writing boot.img
+use_cache_not_tmp=no
+
+

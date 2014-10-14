@@ -1,0 +1,63 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+
+img_dir=$1
+img_file=$2
+
+dos_path=`cygpath -wp $img_dir`
+
+echo
+echo "#####################################################################"
+echo
+echo " 请从 $img_file 解压文件前阅读此说明:"
+echo
+echo " 1) 请确保 MagicISO 已经安装，发现在:"
+echo "    tools/magiciso_windows/Setup_MagicISO.exe"
+echo
+echo " 2) 运行 MagicISO ，选择 'Try It' 和使用 'File->Open Image' 以"
+echo "    挂载:"
+echo "    $dos_path\\$img_file"
+echo
+echo "    注意: 查看您的文件，输入 '*.rfs' 在对话框底部 'File name' 框架。"
+echo
+
+next_num=5
+
+if [ "$img_file" == "cache.rfs" ]
+then
+  echo " 3) 在右上方窗口，打开 'recovery' 文件夹使 sec_csc.zip 文件显示"
+  echo
+  echo " 4) 右击 sec_csc.zip ，选中 'Extract' 并选择文件夹 $dos_path"
+
+elif [ "$img_file" == "csc.rfs" ]
+then
+  echo " 3) 在右上方窗口, 在 csc.zip 上右击, 选中 'Extract' 并选择文件夹 $dos_path"
+
+  next_num=4
+
+else
+  echo " 3) 在右上方窗口，右击此文件夹并选择 'Select All' （选择全部）"
+  echo
+  echo " 4) 再次右击，选中 'Extract' 并选择文件夹 $dos_path"
+  echo
+fi
+
+echo
+echo " $next_num) 等待解压完成时关闭 MagicISO"
+echo
+echo "#####################################################################"
+echo
+
+echo
+echo ">>>> 按回车键之前请完成以上步骤!<<<<"
+echo
+
+scripts/press_enter

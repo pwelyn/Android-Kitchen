@@ -1,0 +1,70 @@
+############################################################################
+#
+# Copyright (c) 2012 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+clear
+
+echo
+echo "----------------------------------------------------------------"
+echo
+echo "当你在你的Android设备上使用超级终端（如: ConnectBot）时，"
+echo "bash是命令解释器的补全版本"
+echo "要在shell命令终端中启动它，请输入：bash"
+echo
+echo "----------------------------------------------------------------"
+echo
+
+echo -n "继续并安装 (y/n)? (默认: y): "
+read do_install
+
+if [ "$do_install" == "n" ]
+then
+  exit 0
+fi
+
+echo
+
+if [ -d WORKING_* ]
+then
+  echo "发现 Working 文件夹"
+else
+  echo "未发现 Working 文件夹"
+  exit 0
+fi
+
+cd WORKING_*
+
+if [ ! -d system ]
+then
+  echo "未发现 system 文件夹"
+  cd ..
+  exit 0
+fi
+
+
+bash_path=`find . -name bash`
+if [ "$bash_path" == "" ]
+then
+
+  if [ -d system/xbin ]
+  then
+    echo Found /system/xbin
+  else
+    echo Creating /system/xbin
+    mkdir system/xbin
+  fi
+
+  echo "添加 /system/xbin/bash"
+  cp ../tools/bash system/xbin/
+else
+  echo "发现 $bash_path"
+fi
+
+cd ..
+scripts/add_bash_to_update_script

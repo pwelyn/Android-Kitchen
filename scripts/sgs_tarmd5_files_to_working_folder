@@ -1,0 +1,99 @@
+############################################################################
+#
+# Copyright (c) 2011 - dsixda (dislam@rocketmail.com)
+# Copyright (c) 2014 - 越狱   (http://weibo.com/206021119)
+#
+# Android 厨房是100%免费。此脚本文件仅供个人或学习使用
+# by hwh132 越狱 汉化
+#
+############################################################################
+
+#
+# 此脚本有两个可选参数:
+#
+# $1 = "no_create" 或 "create" 或 "create_working"
+#         - 如果工作文件夹已经存在，必须指定 no_create
+# $2 = "kernel_only" 或 "name_given" - 如果已经指定则 $1 是强制的
+#
+
+
+if [ "$1" == "no_create" ]
+then
+  build_dir=`ls | grep -m 1 ^WORKING_`
+
+else
+
+  #
+  # 工作文件夹名称
+  #
+  build_dir=`scripts/set_working_folder_name $2`
+
+  #
+  # 创建文件夹结构
+  #
+  echo
+  echo "创建 Working 文件夹 $build_dir ..."
+  mkdir $build_dir
+
+  echo "复制 original_update 到 $build_dir ..."
+  cp original_update/PDA.tar.md5 $build_dir 2>/dev/null
+  cp original_update/CSC.tar.md5 $build_dir 2>/dev/null
+  cp original_update/PHONE.tar.md5 $build_dir 2>/dev/null
+
+fi
+
+echo
+echo "解包 PDA.tar.md5 ..."
+
+tar xvf $build_dir/PDA.tar.md5 -C $build_dir -x factoryfs.rfs zImage 2>/dev/null
+rm -f $build_dir/PDA.tar.md5
+
+if [ ! -e $build_dir/factoryfs.rfs ]
+then
+  echo
+  echo "错误: 无法解压 factoryfs.rfs!"
+  exit 1
+fi
+
+if [ ! -e $build_dir/zImage ]
+then
+  echo
+  echo "警告: 未发现 zImage"
+else
+  scripts/show_rooted_kernel_msg
+fi
+
+if [ -e $build_dir/CSC.tar.md5 ]
+then
+  echo
+  echo "解包 CSC.tar.md5 ..."
+
+  tar xvf $build_dir/CSC.tar.md5 -C $build_dir -x cache.rfs 2>/dev/null
+  rm -f $build_dir/CSC.tar.md5
+
+  if [ ! -e $build_dir/cache.rfs ]
+  then
+    echo
+    echo "错误: 无法解压 cache.rfs!"
+    exit 1
+  fi
+fi
+
+if [ -e $build_dir/PHONE.tar.md5 ]
+then
+  echo
+  echo "解包 PHONE.tar.md5 ..."
+
+  tar xvf $build_dir/PHONE.tar.md5 -C $build_dir -x modem.bin 2>/dev/null
+  rm -f $build_dir/PHONE.tar.md5
+
+  if [ ! -e $build_dir/modem.bin ]
+  then
+    echo
+    echo "错误: 无法解压 modem.bin!"
+    exit 1
+  fi
+fi
+
+scripts/rfs_files_to_working_folder no_create $2
+exit $?
